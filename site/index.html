@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WeBjammin — a pixel rhythm game for the M5Stack Cardputer Zero</title>
+<meta name="description" content="WeBjammin is a keyboard-driven pixel rhythm game for the M5Stack Cardputer Zero: five frets, a 320×170 highway, songs you download from a catalogue, and guitars over GPIO, USB or Bluetooth.">
+<meta property="og:title" content="WeBjammin">
+<meta property="og:description" content="A pixel rhythm game for the M5Stack Cardputer Zero.">
+<meta property="og:image" content="assets/hero.png">
+<link rel="icon" href="assets/icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#top">
+    <img src="assets/logo-mark.png" alt="WeBjammin logo" width="132" height="41">
+  </a>
+  <nav class="nav">
+    <a href="#play">Play</a>
+    <a href="#how">How to play</a>
+    <a href="#packs">Song packs</a>
+    <a href="#roadmap">Roadmap</a>
+    <a href="#build">Build</a>
+  </nav>
+  <a class="btn btn-primary btn-sm" href="#build">Get the code</a>
+</header>
+
+<main id="top">
+
+<!-- ============================ HERO ============================ -->
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">M5Stack Cardputer Zero · Debian arm64 · 320 × 170</p>
+    <h1>Rock the keys<br>under the screen.</h1>
+    <p class="lede">
+      The Cardputer Zero's <strong>4 5 6 7 8</strong> keys sit directly under its
+      1.9-inch panel. WeBjammin turns them into five frets, drops a highway
+      down the screen, and plays the song the chart tells it to — so the note you
+      hear and the note you press are the same event.
+    </p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#build">Build it on your Zero</a>
+      <a class="btn btn-ghost" href="#packs">Browse song packs</a>
+    </div>
+    <dl class="facts">
+      <div><dt>Display</dt><dd>320 × 170 RGB565</dd></div>
+      <div><dt>Audio</dt><dd>48 kHz, ES8389, sample-locked</dd></div>
+      <div><dt>Input</dt><dd>Keypad · GPIO · USB · Bluetooth</dd></div>
+      <div><dt>Footprint</dt><dd>&lt; 48 MB RSS, 60 FPS</dd></div>
+    </dl>
+  </div>
+  <div class="hero-art">
+    <img src="assets/hero.png" alt="Pixel highway with notes falling into five coloured fret buttons" width="1280" height="480">
+    <figcaption>Real frame, rendered by the game at 320 × 170 and scaled up.</figcaption>
+  </div>
+</section>
+
+<!-- ============================ PLAY ============================ -->
+<section id="play" class="section">
+  <header class="section-head">
+    <p class="eyebrow">01 — The game</p>
+    <h2>Arcade rhythm, one key at a time</h2>
+    <p class="section-lede">
+      Notes fall down the highway. Strike the matching fret on the beat, hold
+      sustains, throw in the strum. Miss too much and the Jam meter empties.
+    </p>
+  </header>
+
+  <div class="grid grid-3">
+    <article class="card">
+      <h3>Judgement that feels fair</h3>
+      <p>PERFECT ±25 ms, GREAT ±55 ms, GOOD ±90 ms. Combo, 1×–4× multiplier,
+         live accuracy and a Rock/Jam meter for the health bar.</p>
+      <ul class="ticks">
+        <li>Tap, HOPO and strum rules</li>
+        <li>4-lane and 5-lane charts</li>
+        <li>Adjustable scroll speed</li>
+      </ul>
+    </article>
+    <article class="card">
+      <h3>Plays what you bring</h3>
+      <p>Clone Hero <code>.chart</code>, Standard MIDI <code>.mid</code>,
+         StepMania <code>.sng</code>, our own <code>.wj.json</code>, or a
+         streamed WAV. Charts and audio are pulled from a catalogue you point
+         the game at.</p>
+      <ul class="ticks">
+        <li>Chart catalogue with in-game download</li>
+        <li>Zip archives unpacked automatically</li>
+        <li>Three original songs synthesised in-game</li>
+      </ul>
+    </article>
+    <article class="card">
+      <h3>Every way to play</h3>
+      <p>The 46-key keypad works out of the box. Build a button box on the
+         extension header, plug in a USB guitar, or pair a Bluetooth one — all
+         four land in the same input manager.</p>
+      <ul class="ticks">
+        <li>Hot-plug: plug in mid-song</li>
+        <li>On-screen remapper</li>
+        <li>Tap-test calibration</li>
+      </ul>
+    </article>
+  </div>
+
+  <div class="shots">
+    <figure><img src="assets/screen-gameplay.png" alt="Gameplay screen" width="320" height="170"><figcaption>The highway</figcaption></figure>
+    <figure><img src="assets/screen-songselect.png" alt="Song browser" width="320" height="170"><figcaption>Song browser</figcaption></figure>
+    <figure><img src="assets/screen-results.png" alt="Results screen" width="320" height="170"><figcaption>Results</figcaption></figure>
+    <figure><img src="assets/device-title.png" alt="WeBjammin running on the device" width="320" height="170"><figcaption>On the real device</figcaption></figure>
+  </div>
+</section>
+
+<!-- ============================ HOW ============================ -->
+<section id="how" class="section alt">
+  <header class="section-head">
+    <p class="eyebrow">02 — How to play</p>
+    <h2>Four steps, then you're a rocker</h2>
+  </header>
+
+  <ol class="steps">
+    <li><span class="step-n">1</span><div>
+      <h3>Flash and install</h3>
+      <p>Run the Debian image, <code>apt install build-essential libasound2-dev</code>,
+         copy the repo to the device and <code>make</code>. The Zero compiles it
+         itself — no cross-toolchain.</p>
+    </div></li>
+    <li><span class="step-n">2</span><div>
+      <h3>Make it yours</h3>
+      <p>Edit <code>~/.config/webjammin/config.json</code>: timing windows,
+         scroll speed, the audio device and the GPIO pin map. Remap buttons in
+         the game and it writes the file for you.</p>
+    </div></li>
+    <li><span class="step-n">3</span><div>
+      <h3>Calibrate</h3>
+      <p>Title → <em>Calibration</em>: tap along with the click eight times. The
+         median error becomes the offset that keeps the highway and the codec
+         in agreement.</p>
+    </div></li>
+    <li><span class="step-n">4</span><div>
+      <h3>Download a song</h3>
+      <p>Song browser → <em>Catalogue</em> tab → <kbd>ENTER</kbd>. The chart (and
+         the audio, if the catalogue offers it) lands in your song folder and is
+         playable immediately.</p>
+    </div></li>
+  </ol>
+
+  <div class="grid grid-2">
+    <div class="panel">
+      <h3>Controls</h3>
+      <table class="keys">
+        <tr><td><kbd>1</kbd>–<kbd>5</kbd></td><td>Frets 1–5 (the keys under the panel)</td></tr>
+        <tr><td><kbd>Space</kbd></td><td>Strum / open notes</td></tr>
+        <tr><td><kbd>F</kbd><kbd>X</kbd><kbd>Z</kbd><kbd>C</kbd></td><td>Up · Down · Left · Right</td></tr>
+        <tr><td><kbd>Enter</kbd></td><td>Confirm</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Back / quit to the song list</td></tr>
+        <tr><td><kbd>Tab</kbd></td><td>Pause</td></tr>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Wiring a button box</h3>
+      <p class="small">The 14-pin EXT header on top of the chassis carries five
+         free GPIOs. Wire them active-low to GND and map them in the config —
+         no recompile.</p>
+      <table class="keys">
+        <tr><td>Pin 5</td><td>GPIO22 → fret 1</td></tr>
+        <tr><td>Pin 7</td><td>GPIO11 → fret 2</td></tr>
+        <tr><td>Pin 9</td><td>GPIO10 → fret 3</td></tr>
+        <tr><td>Pin 11</td><td>GPIO9 → fret 4</td></tr>
+        <tr><td>Pin 13</td><td>GPIO7 → fret 5</td></tr>
+        <tr><td>Pin 12</td><td>GPIO15 → strum</td></tr>
+      </table>
+      <p class="small dim">Pins 8 and 10 are the onboard I²C bus — leave them
+         alone. Pins 12 and 14 are the UART console.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ PACKS ============================ -->
+<section id="packs" class="section">
+  <header class="section-head">
+    <p class="eyebrow">03 — Song packs</p>
+    <h2>Curated catalogues, one click away</h2>
+    <p class="section-lede">
+      The catalogue client reads a small JSON index from a website, lists the
+      songs in the game's own browser and downloads them one at a time. The
+      packs below are the formats it understands.
+    </p>
+  </header>
+
+  <div class="grid grid-4 packs">
+    <article class="pack">
+      <img src="assets/pack-gh3.png" alt="Guitar Hero III pack artwork" width="640" height="400">
+      <h3>Guitar Hero III</h3>
+      <p class="small">73 songs across eight tiers, three boss battles and the
+         bonus store — the pack that defined the genre.</p>
+      <span class="tag">.chart · .sng</span>
+    </article>
+    <article class="pack">
+      <img src="assets/pack-yarg.png" alt="Yet Another Guitar Game pack artwork" width="640" height="400">
+      <h3>Yet Another Guitar Game</h3>
+      <p class="small">Community chart packs in the Clone Hero dialect, with
+         per-part difficulty that WeBjammin reads straight out of the file.</p>
+      <span class="tag">.chart</span>
+    </article>
+    <article class="pack">
+      <img src="assets/pack-clonehero.png" alt="Clone Hero pack artwork" width="640" height="400">
+      <h3>Clone Hero</h3>
+      <p class="small">The format reference: <code>.chart</code> text, tempo
+         maps, sustains, chords and HOPO notes.</p>
+      <span class="tag">.chart · .mid</span>
+    </article>
+    <article class="pack">
+      <img src="assets/pack-originals.png" alt="Original synthesised songs artwork" width="640" height="400">
+      <h3>Originals</h3>
+      <p class="small">Songs composed for WeBjammin and rendered by its own FM
+         engine — no licensing, no downloads, perfect sync by construction.</p>
+      <span class="tag">.wj.json</span>
+    </article>
+  </div>
+
+  <div class="panel track-panel">
+    <div class="track-head">
+      <h3>Guitar Hero III — full track index</h3>
+      <input id="track-search" type="search" placeholder="Search 141 tracks — title or artist…" autocomplete="off" aria-label="Search tracks">
+    </div>
+    <p class="small dim">Metadata only, from the public track listing. WeBjammin
+      ships no copyrighted audio or charts; the list is here so you know what to
+      look for in a catalogue you have the rights to use.</p>
+    <div id="track-list" class="tracks"></div>
+    <p id="track-empty" class="small dim" hidden>No track matches that.</p>
+  </div>
+
+  <aside class="callout">
+    <h3>How the catalogue stays legal</h3>
+    <p>
+      The game downloads exactly what you point it at — one song at a time, when
+      you ask for it. There is no bulk scraper, no bundled music, and no
+      built-in source. Point <code>catalogue.index_url</code> at a catalogue you
+      are allowed to use (your own LAN share, a community pack you have rights
+      to, or a site that publishes freely licensed charts), and the game will
+      pull from it.
+    </p>
+  </aside>
+</section>
+
+<!-- ============================ ROADMAP ============================ -->
+<section id="roadmap" class="section alt">
+  <header class="section-head">
+    <p class="eyebrow">04 — Roadmap</p>
+    <h2>Where the set goes next</h2>
+    <p class="section-lede">
+      The engine is done; the game around it is still being built. This is the
+      order we are taking it in, and what each stage unlocks.
+    </p>
+  </header>
+
+  <ol class="roadmap">
+    <li class="done">
+      <div class="rm-head"><span class="rm-badge">Shipped</span><h3>Core engine &amp; play loop</h3></div>
+      <p>Chart readers for four formats, the audio-locked scheduler, judgement
+         and scoring, the four input backends, the song browser, the catalogue
+         client, calibration and the in-game remapper.</p>
+      <ul class="ticks">
+        <li>320 × 170 renderer, 60 FPS target</li>
+        <li>Zero AXRUs in a 10-minute session</li>
+        <li>22 unit tests</li>
+      </ul>
+    </li>
+    <li class="next">
+      <div class="rm-head"><span class="rm-badge">Next</span><h3>Career &amp; touring mode</h3></div>
+      <p>Play the gig, not just the song. A campaign across venues — the dive,
+         the club, the arena — with setlists, unlocks and encores, exactly the
+         structure that made Guitar Hero III a genre.</p>
+      <ul class="ticks">
+        <li>Venue ladder: eight tiers, three boss battles</li>
+        <li>Setlists built from your catalogue, per-song difficulty</li>
+        <li>Encore songs gated behind a full-combo clear</li>
+        <li>Career progress and unlocks stored locally, atomically</li>
+        <li>Score attack mode: one song, one multiplier, no safety net</li>
+      </ul>
+    </li>
+    <li class="later">
+      <div class="rm-head"><span class="rm-badge">Planned</span><h3>Versus, ghosts &amp; the band</h3></div>
+      <p>Music games live on the people you play against. WeBjammin's plan is
+         local-first, because the Zero cannot always reach the internet.</p>
+      <ul class="ticks">
+        <li><strong>Hot-seat versus</strong> — two players, one device, the
+            highway split down the middle</li>
+        <li><strong>LAN versus</strong> — two Zeroes on the same network race
+            the same chart, one acting as the timing authority</li>
+        <li><strong>Ghosts</strong> — replay a run and race your own best</li>
+        <li><strong>Local leaderboard</strong> — LAN-hosted, no account needed</li>
+        <li><strong>The band grows</strong> — bass and drum lanes, co-op parts,
+            harmonies</li>
+      </ul>
+    </li>
+    <li class="later">
+      <div class="rm-head"><span class="rm-badge">Planned</span><h3>Content &amp; tooling</h3></div>
+      <ul class="ticks">
+        <li>Chart editor on the device (note entry on the 46 keys)</li>
+        <li>Procedural set generator with seed sharing</li>
+        <li>Themes, note skins and palettes</li>
+        <li>Store release as an APPLaunch package</li>
+      </ul>
+    </li>
+  </ol>
+</section>
+
+<!-- ============================ BUILD ============================ -->
+<section id="build" class="section">
+  <header class="section-head">
+    <p class="eyebrow">05 — Build it</p>
+    <h2>On the device, in one command</h2>
+  </header>
+
+  <div class="grid grid-2">
+    <div class="panel code-panel">
+      <h3>On the Cardputer Zero</h3>
+<pre><code># Debian 13 (trixie) arm64
+sudo apt install -y build-essential libasound2-dev curl unzip
+
+git clone &lt;repo&gt; webjammin &amp;&amp; cd webjammin
+make
+make test
+./build/webjammin --generate-songs ~/webjammin/songs
+./build/webjammin</code></pre>
+    </div>
+    <div class="panel code-panel">
+      <h3>On your workstation</h3>
+<pre><code>make                 # build/webjammin
+make test            # 22 unit tests
+make songs           # regenerate the bundled songs
+
+./build/webjammin --selftest
+./build/webjammin --render gameplay frame.ppm
+./build/webjammin --fetch-catalogue https://host/catalogue.json
+./build/webjammin --download-catalogue \
+      https://host/catalogue.json 0 ~/webjammin/songs</code></pre>
+    </div>
+  </div>
+
+  <div class="grid grid-3">
+    <article class="card">
+      <h3>Why no SDL2?</h3>
+      <p>The device has no SDL2, and a DRM backend would fight the APPLaunch
+         launcher for <code>/dev/fb0</code>. We write the panel ourselves — one
+         <code>pwrite</code> of 108 800 bytes — and talk to ALSA directly so the
+         exact playback position can drive note timing.</p>
+    </article>
+    <article class="card">
+      <h3>Why no libgpiod?</h3>
+      <p>The kernel already exposes <code>/sys/class/gpio</code>. Using it means
+         the device needs no extra package, and the pin map can be remapped from
+         the config file at runtime.</p>
+    </article>
+    <article class="card">
+      <h3>Why is the audio the clock?</h3>
+      <p>Song position comes from the sound card, not from
+         <code>CLOCK_MONOTONIC</code>. Frames played minus frames buffered is
+         the only position that cannot drift over a four-minute song.</p>
+    </article>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <img src="assets/logo-mark.png" alt="" width="132" height="41">
+    <p class="small dim">
+      WeBjammin is original work for the M5Stack Cardputer Zero.
+      The game ships no copyrighted audio or charts — see the note on song packs.
+    </p>
+    <p class="small dim">Site art generated from the game's own 5 × 7 pixel font · <code>site/tools/make_art.py</code></p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+</body>
+</html>

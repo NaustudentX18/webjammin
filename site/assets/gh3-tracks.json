@@ -1,0 +1,702 @@
+[
+ {
+  "title": "3's & 7's",
+  "artist": "Queens of the Stone Age",
+  "year": "2007"
+ },
+ {
+  "title": "Anarchy in the U.K.",
+  "artist": "Sex Pistols",
+  "year": "2007"
+ },
+ {
+  "title": "Barracuda",
+  "artist": "Heart",
+  "year": "1977"
+ },
+ {
+  "title": "Before I Forget",
+  "artist": "Slipknot",
+  "year": "2004"
+ },
+ {
+  "title": "Black Magic Woman",
+  "artist": "Santana",
+  "year": "1970"
+ },
+ {
+  "title": "Black Sunshine",
+  "artist": "White Zombie",
+  "year": "1992"
+ },
+ {
+  "title": "Bulls on Parade",
+  "artist": "Rage Against the Machine",
+  "year": "1996"
+ },
+ {
+  "title": "Cherub Rock",
+  "artist": "Smashing Pumpkins",
+  "year": "1993"
+ },
+ {
+  "title": "Cities on Flame with Rock and Roll",
+  "artist": "Blue \u00d6yster Cult",
+  "year": "1972"
+ },
+ {
+  "title": "Cliffs of Dover",
+  "artist": "Eric Johnson",
+  "year": "1990"
+ },
+ {
+  "title": "Cult of Personality",
+  "artist": "Living Colour",
+  "year": "2007"
+ },
+ {
+  "title": "Devil Went Down to Georgia",
+  "artist": "Steve Ouimette(Inspired by The Charlie Daniels Band)",
+  "year": "2007"
+ },
+ {
+  "title": "Even Flow",
+  "artist": "Pearl Jam",
+  "year": "1991"
+ },
+ {
+  "title": "Guitar Battle vs. Slash",
+  "artist": "Slash",
+  "year": "2007"
+ },
+ {
+  "title": "Guitar Battle vs. Tom Morello",
+  "artist": "Tom Morello",
+  "year": "2007"
+ },
+ {
+  "title": "Helicopter",
+  "artist": "Bloc Party",
+  "year": "2004"
+ },
+ {
+  "title": "Hit Me with Your Best Shot",
+  "artist": "Pat Benatar",
+  "year": "1980"
+ },
+ {
+  "title": "Holiday in Cambodia",
+  "artist": "Dead Kennedys",
+  "year": "1980"
+ },
+ {
+  "title": "Knights of Cydonia",
+  "artist": "Muse",
+  "year": "2006"
+ },
+ {
+  "title": "Kool Thing",
+  "artist": "Sonic Youth",
+  "year": "1990"
+ },
+ {
+  "title": "La Grange",
+  "artist": "ZZ Top",
+  "year": "1973"
+ },
+ {
+  "title": "Lay Down",
+  "artist": "Priestess",
+  "year": "2006"
+ },
+ {
+  "title": "Metal",
+  "artist": "Tenacious D",
+  "year": "2006"
+ },
+ {
+  "title": "Miss Murder",
+  "artist": "AFI",
+  "year": "2006"
+ },
+ {
+  "title": "Mississippi Queen",
+  "artist": "Mountain",
+  "year": "1970"
+ },
+ {
+  "title": "Monsters",
+  "artist": "Matchbook Romance",
+  "year": "2006"
+ },
+ {
+  "title": "My Name Is Jonas",
+  "artist": "Weezer",
+  "year": "1994"
+ },
+ {
+  "title": "Number of the Beast",
+  "artist": "Iron Maiden",
+  "year": "1982"
+ },
+ {
+  "title": "One",
+  "artist": "Metallica",
+  "year": "1988"
+ },
+ {
+  "title": "Paint It Black",
+  "artist": "Rolling Stones",
+  "year": "1966"
+ },
+ {
+  "title": "Paranoid",
+  "artist": "Black Sabbath",
+  "year": "1970"
+ },
+ {
+  "title": "Pride and Joy",
+  "artist": "Stevie Ray Vaughan",
+  "year": "1983"
+ },
+ {
+  "title": "Raining Blood",
+  "artist": "Slayer",
+  "year": "1986"
+ },
+ {
+  "title": "Reptilia",
+  "artist": "Strokes",
+  "year": "2003"
+ },
+ {
+  "title": "Rock and Roll All Nite",
+  "artist": "Kiss",
+  "year": "1975"
+ },
+ {
+  "title": "Rock You Like a Hurricane",
+  "artist": "Scorpions",
+  "year": "1984"
+ },
+ {
+  "title": "Sabotage",
+  "artist": "Beastie Boys",
+  "year": "1994"
+ },
+ {
+  "title": "Same Old Song and Dance",
+  "artist": "Aerosmith",
+  "year": "1974"
+ },
+ {
+  "title": "School's Out",
+  "artist": "Alice Cooper",
+  "year": "1972"
+ },
+ {
+  "title": "Seeker",
+  "artist": "WhoThe Who",
+  "year": "1970"
+ },
+ {
+  "title": "Slow Ride",
+  "artist": "Foghat",
+  "year": "1975"
+ },
+ {
+  "title": "Story of My Life",
+  "artist": "Social Distortion",
+  "year": "1990"
+ },
+ {
+  "title": "Stricken",
+  "artist": "Disturbed",
+  "year": "2005"
+ },
+ {
+  "title": "Suck My Kiss",
+  "artist": "Red Hot Chili Peppers",
+  "year": "1991"
+ },
+ {
+  "title": "Sunshine of Your Love",
+  "artist": "Cream",
+  "year": "1968"
+ },
+ {
+  "title": "Talk Dirty to Me",
+  "artist": "Poison",
+  "year": "1987"
+ },
+ {
+  "title": "Welcome to the Jungle",
+  "artist": "Guns N' Roses",
+  "year": "1987"
+ },
+ {
+  "title": "When You Were Young",
+  "artist": "Killers",
+  "year": "2006"
+ },
+ {
+  "title": "Avalancha",
+  "artist": "H\u00e9roes del Silencio",
+  "year": "1995"
+ },
+ {
+  "title": "Can't Be Saved",
+  "artist": "Senses Fail",
+  "year": "2006"
+ },
+ {
+  "title": "Closer",
+  "artist": "Lacuna Coil",
+  "year": "2006"
+ },
+ {
+  "title": "Don't Hold Back",
+  "artist": "Sleeping",
+  "year": "2006"
+ },
+ {
+  "title": "Down 'n Dirty",
+  "artist": "L.A. Slum Lords",
+  "year": "2007"
+ },
+ {
+  "title": "F.C.P.R.E.M.I.X.",
+  "artist": "Fall of Troy",
+  "year": "2005"
+ },
+ {
+  "title": "Generation Rock",
+  "artist": "Revolverheld",
+  "year": "2005"
+ },
+ {
+  "title": "Go That Far",
+  "artist": "Bret Michaels Band",
+  "year": "2006"
+ },
+ {
+  "title": "Hier kommt Alex",
+  "artist": "Toten Hosen",
+  "year": "1988"
+ },
+ {
+  "title": "I'm in the Band",
+  "artist": "Hellacopters",
+  "year": "2005"
+ },
+ {
+  "title": "Impulse",
+  "artist": "Endless Sporadic",
+  "year": "2007"
+ },
+ {
+  "title": "In Love",
+  "artist": "Scouts of St. Sebastian",
+  "year": "2006"
+ },
+ {
+  "title": "In the Belly of a Shark",
+  "artist": "Gallows",
+  "year": "2006"
+ },
+ {
+  "title": "Mauvais Gar\u00e7on",
+  "artist": "Naast",
+  "year": "2007"
+ },
+ {
+  "title": "Metal Heavy Lady",
+  "artist": "Lions",
+  "year": "2007"
+ },
+ {
+  "title": "Minus Celsius",
+  "artist": "Backyard Babies",
+  "year": "2003"
+ },
+ {
+  "title": "My Curse",
+  "artist": "Killswitch Engage",
+  "year": "2006"
+ },
+ {
+  "title": "Nothing for Me Here",
+  "artist": "Dope",
+  "year": "2007"
+ },
+ {
+  "title": "Prayer of the Refugee",
+  "artist": "Rise Against",
+  "year": "2006"
+ },
+ {
+  "title": "Radio Song",
+  "artist": "Superbus",
+  "year": "2004"
+ },
+ {
+  "title": "Ruby",
+  "artist": "Kaiser Chiefs",
+  "year": "2007"
+ },
+ {
+  "title": "She Bangs the Drums",
+  "artist": "Stone Roses",
+  "year": "1989"
+ },
+ {
+  "title": "Take This Life",
+  "artist": "In Flames",
+  "year": "2006"
+ },
+ {
+  "title": "Way it Ends",
+  "artist": "Prototype",
+  "year": "2006"
+ },
+ {
+  "title": "Through the Fire and Flames",
+  "artist": "DragonForce",
+  "year": "2006"
+ },
+ {
+  "title": "Carcinogen Crush",
+  "artist": "AFI",
+  "year": "2007"
+ },
+ {
+  "title": "Tina",
+  "artist": "Flyleaf",
+  "year": "2007"
+ },
+ {
+  "title": "Putting Holes in Happiness (Nick Zinner Remix)",
+  "artist": "Marilyn Manson",
+  "year": "2007"
+ },
+ {
+  "title": "All My Life",
+  "artist": "Foo Fighters",
+  "year": "2002"
+ },
+ {
+  "title": "Pretender",
+  "artist": "Foo Fighters",
+  "year": "2007"
+ },
+ {
+  "title": "This Is a Call",
+  "artist": "Foo Fighters",
+  "year": "1995"
+ },
+ {
+  "title": "She Builds Quick Machines",
+  "artist": "Velvet Revolver",
+  "year": "2007"
+ },
+ {
+  "title": "Slither",
+  "artist": "Velvet Revolver",
+  "year": "2004"
+ },
+ {
+  "title": "Messages",
+  "artist": "Velvet Revolver",
+  "year": "2007"
+ },
+ {
+  "title": "Tom Morello Guitar Battle",
+  "artist": "Tom Morello",
+  "year": "2007"
+ },
+ {
+  "title": "Slash Guitar Battle",
+  "artist": "Slash",
+  "year": "2007"
+ },
+ {
+  "title": "Halo Theme MJOLNIR Mix",
+  "artist": "O'Donnell",
+  "year": "2004"
+ },
+ {
+  "title": "Ernten Was Wir S\u00e4en",
+  "artist": "Fantastischen Vier",
+  "year": "2007"
+ },
+ {
+  "title": "So Payaso",
+  "artist": "Extremoduro",
+  "year": "1996"
+ },
+ {
+  "title": "Antisocial",
+  "artist": "Trust",
+  "year": "1980"
+ },
+ {
+  "title": "We Three Kings",
+  "artist": "Steve Ouimette",
+  "year": "2007"
+ },
+ {
+  "title": "Pretty Handsome Awkward",
+  "artist": "Used",
+  "year": "2007"
+ },
+ {
+  "title": "No More Sorrow",
+  "artist": "Linkin Park",
+  "year": "2007"
+ },
+ {
+  "title": "Sleeping Giant",
+  "artist": "Mastodon",
+  "year": "2006"
+ },
+ {
+  "title": "Any Way You Want It",
+  "artist": "Journey",
+  "year": "1980"
+ },
+ {
+  "title": "Jukebox Hero",
+  "artist": "Foreigner",
+  "year": "1981"
+ },
+ {
+  "title": "Peace of Mind",
+  "artist": "Boston",
+  "year": "1976"
+ },
+ {
+  "title": "Dream On",
+  "artist": "Aerosmith",
+  "year": "1973"
+ },
+ {
+  "title": "Excuse Me Mr.",
+  "artist": "No Doubt",
+  "year": "1996"
+ },
+ {
+  "title": "Don't Speak",
+  "artist": "No Doubt",
+  "year": "1996"
+ },
+ {
+  "title": "Sunday Morning",
+  "artist": "No Doubt",
+  "year": "1996"
+ },
+ {
+  "title": "Arsonist",
+  "artist": "Thrice",
+  "year": "2007"
+ },
+ {
+  "title": "Hole in the Earth",
+  "artist": "Deftones",
+  "year": "2006"
+ },
+ {
+  "title": "Almost Easy",
+  "artist": "Avenged Sevenfold",
+  "year": "2007"
+ },
+ {
+  "title": "Famous For Nothing",
+  "artist": "Dropkick Murphys",
+  "year": "2007"
+ },
+ {
+  "title": "Flannigan's Ball(F)lannigan's Ball",
+  "artist": "Dropkick Murphys",
+  "year": "2007"
+ },
+ {
+  "title": "Johnny, I Hardly Knew Ya",
+  "artist": "Dropkick Murphys",
+  "year": "2007"
+ },
+ {
+  "title": "Nine Lives",
+  "artist": "Def Leppard",
+  "year": "2008"
+ },
+ {
+  "title": "Rock of Ages\" (Live)",
+  "artist": "Def Leppard",
+  "year": "1983"
+ },
+ {
+  "title": "Photograph\" (Live)",
+  "artist": "Def Leppard",
+  "year": "1983"
+ },
+ {
+  "title": "Exo-Politics",
+  "artist": "Muse",
+  "year": "2006"
+ },
+ {
+  "title": "Supermassive Black Hole",
+  "artist": "Muse",
+  "year": "2006"
+ },
+ {
+  "title": "Stockholm Syndrome",
+  "artist": "Muse",
+  "year": "2003"
+ },
+ {
+  "title": "We Are The Road Crew(We Are) The Road Crew",
+  "artist": "Mot\u00f6rhead",
+  "year": "2008"
+ },
+ {
+  "title": "Stay Clean",
+  "artist": "Mot\u00f6rhead",
+  "year": "2008"
+ },
+ {
+  "title": "Motorhead",
+  "artist": "Mot\u00f6rhead",
+  "year": "2008"
+ },
+ {
+  "title": "End Begins (to Rock)",
+  "artist": "Gerard Marino",
+  "year": "2008"
+ },
+ {
+  "title": "Shoot the Runner",
+  "artist": "Kasabian",
+  "year": "2006"
+ },
+ {
+  "title": "I Predict a Riot",
+  "artist": "Kaiser Chiefs",
+  "year": "2004"
+ },
+ {
+  "title": "Problems\" (Live at Brixton)",
+  "artist": "Sex Pistols",
+  "year": "2008"
+ },
+ {
+  "title": "Violet Hill",
+  "artist": "Coldplay",
+  "year": "2008"
+ },
+ {
+  "title": "Yellow",
+  "artist": "Coldplay",
+  "year": "2000"
+ },
+ {
+  "title": "God Put a Smile upon Your Face",
+  "artist": "Coldplay",
+  "year": "2002"
+ },
+ {
+  "title": "I Am Murloc",
+  "artist": "L70ETC",
+  "year": "2008"
+ },
+ {
+  "title": "Top Gun Anthem",
+  "artist": "Steve Ouimette",
+  "year": "1986"
+ },
+ {
+  "title": "Surfing with the Alien",
+  "artist": "Joe Satriani",
+  "year": "1987"
+ },
+ {
+  "title": "For the Love of God",
+  "artist": "Steve Vai",
+  "year": "1990"
+ },
+ {
+  "title": "Soothsayer",
+  "artist": "Buckethead",
+  "year": "2006"
+ },
+ {
+  "title": "Operation Ground and Pound",
+  "artist": "DragonForce",
+  "year": "2006"
+ },
+ {
+  "title": "Revolution Deathsquad",
+  "artist": "DragonForce",
+  "year": "2006"
+ },
+ {
+  "title": "Heroes of Our Time",
+  "artist": "DragonForce",
+  "year": "2008"
+ },
+ {
+  "title": "That Was Just Your Life",
+  "artist": "Metallica",
+  "year": "2008"
+ },
+ {
+  "title": "End of the Line",
+  "artist": "Metallica",
+  "year": "2008"
+ },
+ {
+  "title": "Broken, Beat & Scarred",
+  "artist": "Metallica",
+  "year": "2008"
+ },
+ {
+  "title": "Day That Never Comes",
+  "artist": "Metallica",
+  "year": "2008"
+ },
+ {
+  "title": "All Nightmare Long",
+  "artist": "Metallica",
+  "year": "2008"
+ },
+ {
+  "title": "Cyanide",
+  "artist": "Metallica",
+  "year": "2008"
+ },
+ {
+  "title": "Unforgiven III",
+  "artist": "Metallica",
+  "year": "2008"
+ },
+ {
+  "title": "Judas Kiss",
+  "artist": "Metallica",
+  "year": "2008"
+ },
+ {
+  "title": "Suicide & Redemption J.H.",
+  "artist": "Metallica",
+  "year": "2008"
+ },
+ {
+  "title": "Suicide & Redemption K.H.",
+  "artist": "Metallica",
+  "year": "2008"
+ },
+ {
+  "title": "My Apocalypse",
+  "artist": "Metallica",
+  "year": "2008"
+ }
+]
