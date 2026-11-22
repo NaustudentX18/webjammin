@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <vector>
 
 #include "render/ui.hpp"
 
@@ -331,9 +332,20 @@ void Game::handle_input(const InputEvent& ev) {
         case Screen::Calibration:
             if (ev.type == InputType::Menu && ev.action == MenuAction::Back) {
                 calibrating_ = false;
-                screen_ = Screen::SongSelect;
-            } else if (ev.type == InputType::Strum && ev.value == 1) {
-                // A tap in the calibration screen is recorded by update().
+                screen_ = Screen::Title;
+            } else if ((ev.type == InputType::Strum && ev.value == 1) ||
+                       (ev.type == InputType::Fret && ev.value == 1)) {
+                // A tap: how late was it compared with the last click?
+                cal_taps_.push_back(static_cast<int>(now_ms() - cal_last_click_ms_));
+                if (cal_taps_.size() >= 8) {
+                    std::vector<int> sorted = cal_taps_;
+                    std::sort(sorted.begin(), sorted.end());
+                    const int median = sorted[sorted.size() / 2];
+                    calibration_offset_ = median;
+                    config_.offset_ms = median;
+                    calibration_dirty_ = true;
+                    cal_taps_.clear();
+                }
             }
             break;
 
@@ -427,15 +439,36 @@ void Game::start_calibration() {
     calibrating_ = true;
     cal_taps_.clear();
     cal_next_click_ms_ = now_ms();
+    cal_last_click_ms_ = now_ms();
     calibration_offset_ = 0;
     screen_ = Screen::Calibration;
 }
 
+void Game::play_calibration_click() {
+    if (!audio_ || !audio_->is_open()) return;
+    // A short, bright click pushed straight into the audio ring.
+    static std::vector<int16_t> click;
+    if (click.empty()) {
+        const int frames = audio_->sample_rate() / 50; // 20 ms
+        click.assign(static_cast<size_t>(frames) * 2, 0);
+        for (int i = 0; i < frames; ++i) {
+            const double t = static_cast<double>(i) / audio_->sample_rate();
+            const double env = std::exp(-t * 90.0);
+            const int16_t v = static_cast<int16_t>(std::sin(6.283185307179586 * 1800.0 * t) *
+                                                  env * 18000.0);
+            click[static_cast<size_t>(i) * 2 + 0] = v;
+            click[static_cast<size_t>(i) * 2 + 1] = v;
+        }
+    }
+    audio_->push(click.data(), static_cast<int>(click.size() / 2));
+}
+
 void Game::update_calibration(int64_t wall_ms) {
     if (!calibrating_) return;
-    // A click every 500 ms; taps are recorded against the nearest click.
     if (wall_ms >= cal_next_click_ms_) {
+        cal_last_click_ms_ = wall_ms;
         cal_next_click_ms_ = wall_ms + 500;
+        play_calibration_click();
     }
 }
 

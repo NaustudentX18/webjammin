@@ -198,7 +198,8 @@ screen (title → catalogue → back → calibration) plays a steady click and
 records your taps; the median error becomes `timing.offset_ms` in the config.
 
 The same offset is used by the judgement code, so it fixes both the audio and
-the highway.
+the highway. After eight taps the measured offset is written straight back into
+`~/.config/webjammin/config.json` — no editing needed.
 
 ## 7. Architecture
 

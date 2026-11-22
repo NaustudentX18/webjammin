@@ -289,11 +289,15 @@ void draw_calibration(uint16_t* fb, const Game& game) {
     clear(fb, col::kBackground);
     fill_rect(fb, kW, kH, 0, 0, kW, kStatusH, col::kPanel);
     text(fb, 4, 6, "CALIBRATION", col::kAccent);
-    text_center(fb, 40, "TAP SPACE ON EVERY CLICK", col::kText);
-    text_center(fb, 60, "THE AVERAGE ERROR IS STORED", col::kTextDim);
+    text_center(fb, 36, "TAP SPACE ON EVERY CLICK", col::kText);
+    text_center(fb, 54, "8 TAPS ARE NEEDED", col::kTextDim);
+
     const std::string off = "OFFSET " + std::to_string(game.calibration_result_ms()) + " MS";
-    text_center(fb, 90, off, col::kCombo, 2);
-    text_center(fb, 130, "ESC: BACK", col::kTextDim);
+    text_center(fb, 78, off, col::kCombo, 2);
+    const std::string applied = "APPLIED " + std::to_string(game.calibration_offset_ms()) + " MS";
+    text_center(fb, 104, applied, col::kTextDim);
+    text_center(fb, 126, "NEGATIVE = YOU TAP EARLY", col::kTextDim);
+    text_center(fb, 148, "ESC: BACK", col::kTextDim);
 }
 
 void draw_remap(uint16_t* fb, const Game& game) {

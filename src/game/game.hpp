@@ -62,6 +62,8 @@ public:
     const ProfileSet& profiles() const { return profiles_; }
     void set_input_manager(InputManager* in) { input_manager_ = in; }
     bool profiles_dirty() const { return profiles_dirty_; }
+    bool calibration_dirty() const { return calibration_dirty_; }
+    void clear_calibration_dirty() { calibration_dirty_ = false; }
     void clear_profiles_dirty() { profiles_dirty_ = false; }
 
     // --- catalogue tab ----------------------------------------------------
@@ -172,14 +174,17 @@ private:
     // calibration tap test
     bool calibrating_ = false;
     int64_t cal_next_click_ms_ = 0;
+    int64_t cal_last_click_ms_ = 0;
     std::vector<int> cal_taps_;
     int calibration_offset_ = 0;
+    void play_calibration_click();
 
     // remapper
     int remap_lane_ = 0;
     int remap_code_ = -1;
     InputSource remap_source_ = InputSource::Keyboard;
     bool profiles_dirty_ = false;
+    bool calibration_dirty_ = false;
     ProfileSet profiles_;
     InputManager* input_manager_ = nullptr;
     int title_index_ = 0;

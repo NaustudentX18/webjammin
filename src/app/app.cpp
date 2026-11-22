@@ -173,6 +173,17 @@ void App::run() {
         for (const auto& ev : events) game_.handle_input(ev);
 
         game_.update();
+        if (game_.calibration_dirty()) {
+            config_.game().offset_ms = game_.calibration_offset_ms();
+            const std::string path = options_.config_path.empty()
+                                         ? fs::join(fs::home_dir(),
+                                                    ".config/webjammin/config.json")
+                                         : options_.config_path;
+            if (config_.save(path))
+                std::fprintf(stderr, "config: saved calibration offset %d ms to %s\n",
+                             game_.calibration_offset_ms(), path.c_str());
+            game_.clear_calibration_dirty();
+        }
         if (game_.profiles_dirty()) {
             config_.profiles() = game_.profiles();
             const std::string path = options_.config_path.empty()
