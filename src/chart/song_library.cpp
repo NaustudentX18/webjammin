@@ -1,7 +1,9 @@
 #include "chart/song_library.hpp"
 
 #include <algorithm>
+#include <climits>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "chart/midi.hpp"
 #include "util/fs.hpp"
@@ -9,6 +11,14 @@
 
 namespace wj {
 namespace {
+
+// Canonical path, so the same song found through two directories (e.g. a
+// relative and an absolute song folder) is listed only once.
+std::string real_path(const std::string& path) {
+    char buf[PATH_MAX];
+    if (::realpath(path.c_str(), buf)) return std::string(buf);
+    return path;
+}
 
 int64_t mtime_of(const std::string& path) {
     struct stat st;
@@ -95,7 +105,11 @@ void SongLibrary::scan() {
     std::sort(files.begin(), files.end());
 
     std::vector<SongEntry> merged;
+    std::vector<std::string> seen;
     for (const auto& path : files) {
+        const std::string canonical = real_path(path);
+        if (std::find(seen.begin(), seen.end(), canonical) != seen.end()) continue;
+        seen.push_back(canonical);
         const int64_t mt = mtime_of(path);
         const int64_t sz = fs::file_size(path);
 

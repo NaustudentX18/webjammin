@@ -56,6 +56,28 @@ const Profile* ProfileSet::find(InputSource src) const {
     return profiles_.empty() ? nullptr : &profiles_.front();
 }
 
+bool ProfileSet::set_fret_binding(InputSource src, int lane, int code, int axis, int axis_value) {
+    for (auto& p : profiles_) {
+        if (!p.matches(src)) continue;
+        for (auto& f : p.frets) {
+            if (f.lane == lane) {
+                f.code = code;
+                f.axis = axis;
+                f.axis_value = axis_value;
+                return true;
+            }
+        }
+        FretBinding fb;
+        fb.code = code;
+        fb.lane = lane;
+        fb.axis = axis;
+        fb.axis_value = axis_value;
+        p.frets.push_back(fb);
+        return true;
+    }
+    return false;
+}
+
 bool ProfileSet::translate(InputSource src, int code, int axis, int value, int64_t time_ns,
                            int device_index, const std::string& device_name,
                            InputEvent& out) const {

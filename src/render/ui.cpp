@@ -55,7 +55,7 @@ std::string format_percent(double v) {
 
 } // namespace
 
-void draw_title(uint16_t* fb) {
+void draw_title(uint16_t* fb, int selected) {
     clear(fb, col::kBackground);
     // A subtle fret-bar motif along the bottom.
     for (int lane = 0; lane < kMaxLanes; ++lane) {
@@ -63,11 +63,8 @@ void draw_title(uint16_t* fb) {
         fill_rect(fb, kW, kH, x, 128, kLaneW - 12, 26, rgb565(20, 20, 30));
         draw_rect(fb, kW, kH, x, 128, kLaneW - 12, 26, kLaneColours[lane]);
     }
-    text_center(fb, 34, "WEBJAMMIN", col::kAccent, 3);
-    text_center(fb, 68, "RHYTHM GUITAR FOR THE CARDPUTER ZERO", col::kTextDim);
-    text_center(fb, 92, "4 OR 5 FRETS - KEYBOARD, USB OR BLUETOOTH", col::kTextDim);
-    if ((wj::now_ms() / 500) % 2 == 0) text_center(fb, 106, "PRESS ENTER TO START", col::kText);
-    text_center(fb, 160, "V1.0   320X170   5 FRET   60 FPS", col::kTextDim);
+    text_center(fb, 24, "WEBJAMMIN", col::kAccent, 3);
+    text_center(fb, 54, "RHYTHM GUITAR FOR THE CARDPUTER ZERO", col::kTextDim);
 }
 
 void draw_song_select(uint16_t* fb, const Game& game) {
@@ -303,10 +300,21 @@ void draw_remap(uint16_t* fb, const Game& game) {
     clear(fb, col::kBackground);
     fill_rect(fb, kW, kH, 0, 0, kW, kStatusH, col::kPanel);
     text(fb, 4, 6, "BUTTON REMAPPER", col::kAccent);
-    text_center(fb, 40, "LANE " + std::to_string(game.remap_lane() + 1), col::kText);
-    text_center(fb, 70, "PRESS THE BUTTON TO BIND", col::kTextDim);
-    text_center(fb, 100, "CAPTURED CODE " + std::to_string(game.remap_source_code()), col::kCombo);
-    text_center(fb, 140, "ESC: BACK", col::kTextDim);
+
+    const char* source = source_name(game.remap_source());
+    text(fb, 4, kStatusH + 6, source, col::kTextDim);
+    text(fb, kW - 90, kStatusH + 6, "LEFT/RIGHT: DEVICE", col::kTextDim);
+
+    for (int lane = 0; lane < kMaxLanes; ++lane) {
+        const int y = kStatusH + 24 + lane * 16;
+        const bool sel = lane == game.remap_lane();
+        if (sel) fill_rect(fb, kW, kH, 2, y - 2, kW - 4, 14, rgb565(38, 44, 70));
+        const std::string label = "FRET " + std::to_string(lane + 1);
+        text(fb, 8, y, label, sel ? col::kAccent : col::kTextDim);
+    }
+    const std::string code = "CAPTURED " + std::to_string(game.remap_source_code());
+    text_center(fb, 140, code, col::kCombo);
+    text_center(fb, 156, "UP/DOWN: LANE   ESC: BACK", col::kTextDim);
 }
 
 } // namespace wj::ui

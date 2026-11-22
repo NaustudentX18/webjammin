@@ -56,6 +56,14 @@ public:
     const Catalogue* catalogue() const { return catalogue_; }
     void set_catalogue_download_dir(std::string dir) { download_dir_ = std::move(dir); }
 
+    // --- controller profiles (shared with the input manager) ---------------
+    void set_profiles(const ProfileSet& p) { profiles_ = p; }
+    ProfileSet& profiles() { return profiles_; }
+    const ProfileSet& profiles() const { return profiles_; }
+    void set_input_manager(InputManager* in) { input_manager_ = in; }
+    bool profiles_dirty() const { return profiles_dirty_; }
+    void clear_profiles_dirty() { profiles_dirty_ = false; }
+
     // --- catalogue tab ----------------------------------------------------
     int tab() const { return tab_; }
     void set_tab(int tab) { tab_ = tab; }
@@ -109,9 +117,11 @@ public:
     const std::string& status_message() const { return status_; }
     int remap_lane() const { return remap_lane_; }
     int remap_source_code() const { return remap_code_; }
+    InputSource remap_source() const { return remap_source_; }
 
     // --- calibration ------------------------------------------------------
     void start_calibration();
+    void start_remap(InputSource src);
     // Returns the measured offset in milliseconds (0 = no data yet).
     int calibration_result_ms() const { return calibration_offset_; }
 
@@ -122,6 +132,7 @@ private:
     bool try_hit(int lane, int64_t song_ms);
     void expire_notes(int64_t song_ms);
     void update_calibration(int64_t song_ms);
+    void update_remapper();
 
     Screen screen_ = Screen::Title;
     SongLibrary* library_ = nullptr;
@@ -167,6 +178,11 @@ private:
     // remapper
     int remap_lane_ = 0;
     int remap_code_ = -1;
+    InputSource remap_source_ = InputSource::Keyboard;
+    bool profiles_dirty_ = false;
+    ProfileSet profiles_;
+    InputManager* input_manager_ = nullptr;
+    int title_index_ = 0;
 };
 
 } // namespace wj

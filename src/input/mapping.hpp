@@ -53,6 +53,10 @@ public:
                    int device_index, const std::string& device_name,
                    InputEvent& out) const;
 
+    // Rebinds a lane for a source at runtime (the in-game remapper). Returns
+    // false when no profile applies to that source.
+    bool set_fret_binding(InputSource src, int lane, int code, int axis, int axis_value);
+
     static InputSource parse_source(const std::string& name);
     static const char* menu_action_name(MenuAction a);
     static MenuAction parse_menu_action(const std::string& name);

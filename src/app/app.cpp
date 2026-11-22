@@ -120,7 +120,9 @@ bool App::init(const AppOptions& options, std::string& error) {
 
     std::string ierr;
     input_.init("/dev/input", ierr);
-    input_.set_profiles(config_.profiles());
+    game_.set_profiles(config_.profiles());
+    game_.set_input_manager(&input_);
+    input_.set_profiles(game_.profiles());
     if (!ierr.empty()) std::fprintf(stderr, "input: %s\n", ierr.c_str());
 
     if (config_.gpio().enabled && !config_.gpio().pins.empty()) {
@@ -171,6 +173,16 @@ void App::run() {
         for (const auto& ev : events) game_.handle_input(ev);
 
         game_.update();
+        if (game_.profiles_dirty()) {
+            config_.profiles() = game_.profiles();
+            const std::string path = options_.config_path.empty()
+                                         ? fs::join(fs::home_dir(),
+                                                    ".config/webjammin/config.json")
+                                         : options_.config_path;
+            if (config_.save(path))
+                std::fprintf(stderr, "config: saved remapped profiles to %s\n", path.c_str());
+            game_.clear_profiles_dirty();
+        }
         game_.render(frame_.data());
         if (fb_ok_) fb_.blit(frame_.data());
 
@@ -196,7 +208,7 @@ bool App::render_screen(const std::string& name, const std::string& path) {
     game_.set_catalogue_download_dir(cat_dir);
 
     if (name == "title") {
-        wj::ui::draw_title(fb.data());
+        wj::ui::draw_title(fb.data(), 0);
     } else if (name == "songselect") {
         wj::ui::draw_song_select(fb.data(), game_);
     } else if (name == "gameplay") {

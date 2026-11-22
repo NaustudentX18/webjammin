@@ -136,6 +136,9 @@ void Game::update() {
         case Screen::Calibration:
             update_calibration(now_ms());
             break;
+        case Screen::Remap:
+            update_remapper();
+            break;
         default:
             break;
     }
@@ -232,12 +235,30 @@ bool Game::try_hit(int lane, int64_t song_ms) {
 void Game::handle_input(const InputEvent& ev) {
     switch (screen_) {
         case Screen::Title:
-            if (ev.type == InputType::Menu && ev.action == MenuAction::Confirm) {
-                if (library_) {
-                    library_->set_directories(song_dirs_);
-                    library_->scan();
+            if (ev.type != InputType::Menu) break;
+            if (ev.action == MenuAction::Up) {
+                title_index_ = (title_index_ + 2) % 3;
+            } else if (ev.action == MenuAction::Down) {
+                title_index_ = (title_index_ + 1) % 3;
+            } else if (ev.action == MenuAction::Confirm) {
+                if (title_index_ == 0) {
+                    if (library_) {
+                        library_->set_directories(song_dirs_);
+                        library_->scan();
+                    }
+                    enter(Screen::SongSelect);
+                } else if (title_index_ == 1) {
+                    start_calibration();
+                } else {
+                    start_remap(InputSource::Keyboard);
                 }
-                enter(Screen::SongSelect);
+            } else if (ev.action == MenuAction::Right) {
+                // Switch the remapper target between the keypad and a pad.
+                if (title_index_ == 2) {
+                    remap_source_ = remap_source_ == InputSource::Keyboard
+                                        ? InputSource::UsbHid
+                                        : InputSource::Keyboard;
+                }
             }
             break;
 
@@ -317,8 +338,20 @@ void Game::handle_input(const InputEvent& ev) {
             break;
 
         case Screen::Remap:
-            if (ev.type == InputType::Menu && ev.action == MenuAction::Back) {
-                screen_ = Screen::SongSelect;
+            if (ev.type == InputType::Menu) {
+                if (ev.action == MenuAction::Back) {
+                    screen_ = Screen::Title;
+                } else if (ev.action == MenuAction::Up) {
+                    if (remap_lane_ > 0) --remap_lane_;
+                } else if (ev.action == MenuAction::Down) {
+                    if (remap_lane_ < kMaxLanes - 1) ++remap_lane_;
+                } else if (ev.action == MenuAction::Left || ev.action == MenuAction::Right) {
+                    remap_source_ = remap_source_ == InputSource::Keyboard
+                                        ? InputSource::UsbHid
+                                        : (remap_source_ == InputSource::UsbHid
+                                               ? InputSource::BtHid
+                                               : InputSource::Keyboard);
+                }
             }
             break;
     }
@@ -367,6 +400,29 @@ void Game::handle_play_input(const InputEvent& ev) {
     }
 }
 
+void Game::start_remap(InputSource src) {
+    remap_source_ = src;
+    remap_lane_ = 0;
+    remap_code_ = -1;
+    screen_ = Screen::Remap;
+    if (input_manager_) input_manager_->begin_capture(remap_source_, remap_lane_);
+}
+
+void Game::update_remapper() {
+    if (!input_manager_) return;
+    int code = -1, axis = -1, lane = -1;
+    if (input_manager_->capture_result(code, axis, lane)) {
+        remap_code_ = code;
+        if (profiles_.set_fret_binding(remap_source_, remap_lane_, code, axis, 0)) {
+            profiles_dirty_ = true;
+            if (input_) input_->set_profiles(profiles_);
+        }
+        // Keep capturing for the next press so several lanes can be bound in
+        // a row.
+        input_manager_->begin_capture(remap_source_, remap_lane_);
+    }
+}
+
 void Game::start_calibration() {
     calibrating_ = true;
     cal_taps_.clear();
@@ -386,7 +442,7 @@ void Game::update_calibration(int64_t wall_ms) {
 void Game::render(uint16_t* fb) {
     switch (screen_) {
         case Screen::Title:
-            wj::ui::draw_title(fb);
+            wj::ui::draw_title(fb, title_index_);
             break;
         case Screen::SongSelect:
             wj::ui::draw_song_select(fb, *this);

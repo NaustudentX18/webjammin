@@ -268,6 +268,35 @@ WJ_TEST(profile_axis_binding) {
     CHECK_EQ(ev.value, 0);
 }
 
+WJ_TEST(profile_rebinding) {
+    ProfileSet set;
+    Profile p;
+    p.name = "kbd";
+    p.sources.push_back(InputSource::Keyboard);
+    FretBinding fb;
+    fb.code = 2;
+    fb.lane = 0;
+    p.frets.push_back(fb);
+    set.add(p);
+
+    // Rebind lane 0 to a different key code.
+    CHECK(set.set_fret_binding(InputSource::Keyboard, 0, 30, -1, 0));
+    InputEvent ev;
+    CHECK(set.translate(InputSource::Keyboard, 30, -1, 1, 0, 0, "kbd", ev));
+    CHECK(ev.type == InputType::Fret);
+    CHECK_EQ(ev.lane, 0);
+    // The old code no longer maps.
+    CHECK(!set.translate(InputSource::Keyboard, 2, -1, 1, 0, 0, "kbd", ev));
+
+    // A lane that had no binding gets one.
+    CHECK(set.set_fret_binding(InputSource::Keyboard, 3, 33, -1, 0));
+    CHECK(set.translate(InputSource::Keyboard, 33, -1, 1, 0, 0, "kbd", ev));
+    CHECK_EQ(ev.lane, 3);
+
+    // An unrelated source has no profile, so nothing changes.
+    CHECK(!set.set_fret_binding(InputSource::UsbHid, 0, 40, -1, 0));
+}
+
 WJ_TEST(font_legible) {
     Font::init();
     // Every glyph must have at least one lit pixel (except the space).
