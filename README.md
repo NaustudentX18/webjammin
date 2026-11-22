@@ -2,6 +2,10 @@
 
 **A keyboard-driven pixel rhythm game for the M5Stack Cardputer Zero.**
 
+> Repository: <https://github.com/NaustudentX18/webjammin> ·
+> Landing page: `site/index.html` (open it over any static server) ·
+> First release: `v0.1.0`
+
 Five frets, one strum, a 320 × 170 pixel highway and songs that are
 synthesised from their own charts — so the note you hear and the note you
 press are the same event, and nothing drifts over a four-minute song.
