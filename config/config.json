@@ -23,7 +23,8 @@
     "hopo_supported": true,
     "strum_required": false,
     "overstrum_penalty": true,
-    "lead_in_ms": 1500
+    "lead_in_ms": 1500,
+    "play_mode": "classic"
   },
 
   "catalogue": {
@@ -33,7 +34,7 @@
   },
 
   "gpio": {
-    "enabled": false,
+    "enabled": true,
     "active_low": true,
     "debounce_ms": 5,
     "pins": [
@@ -70,15 +71,41 @@
         { "code": 5, "lane": 3 },
         { "code": 6, "lane": 4 }
       ],
-      "strum": [57],
+      "strum": [57, 28],
       "menu": {
-        "up": [59],
-        "down": [45],
-        "left": [44],
-        "right": [46],
+        "up": [59, 103],
+        "down": [45, 108],
+        "left": [44, 105],
+        "right": [46, 106],
         "confirm": [28],
         "back": [1],
         "pause": [15]
+      }
+    },
+    {
+      "name": "guitar-controller",
+      "sources": ["usb-hid", "bt-hid"],
+      "frets": [
+        { "code": 304, "lane": 0 },
+        { "code": 305, "lane": 1 },
+        { "code": 308, "lane": 2 },
+        { "code": 307, "lane": 3 },
+        { "code": 310, "lane": 4 },
+        { "code": 256, "lane": 0 },
+        { "code": 257, "lane": 1 },
+        { "code": 258, "lane": 2 },
+        { "code": 259, "lane": 3 },
+        { "code": 260, "lane": 4 }
+      ],
+      "strum": [544, 545, 103, 108, 311, 312, 57],
+      "menu": {
+        "up": [544, 103, 286],
+        "down": [545, 108, 287],
+        "left": [546, 105, 288],
+        "right": [547, 106, 289],
+        "confirm": [304, 315, 28],
+        "back": [305, 314, 1],
+        "pause": [315, 15]
       }
     },
     {
@@ -91,14 +118,14 @@
         { "code": 308, "lane": 3 },
         { "code": 310, "lane": 4 }
       ],
-      "strum": [311, 312],
+      "strum": [311, 312, 544, 545],
       "menu": {
-        "up": [286],
-        "down": [287],
-        "left": [288],
-        "right": [289],
-        "confirm": [304],
-        "back": [1],
+        "up": [286, 544],
+        "down": [287, 545],
+        "left": [288, 546],
+        "right": [289, 547],
+        "confirm": [304, 315],
+        "back": [305, 1],
         "pause": [315]
       }
     },

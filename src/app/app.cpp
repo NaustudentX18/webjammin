@@ -180,8 +180,8 @@ void App::run() {
                                                     ".config/webjammin/config.json")
                                          : options_.config_path;
             if (config_.save(path))
-                std::fprintf(stderr, "config: saved calibration offset %d ms to %s\n",
-                             game_.calibration_offset_ms(), path.c_str());
+                std::fprintf(stderr, "config: saved calibration offset %lld ms to %s\n",
+                             static_cast<long long>(game_.calibration_offset_ms()), path.c_str());
             game_.clear_calibration_dirty();
         }
         if (game_.profiles_dirty()) {

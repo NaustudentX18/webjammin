@@ -104,7 +104,34 @@ gpio: 6 pins active
 If it prints `gpio: cannot export GPIO 22: ...`, the pin is already in use by
 another driver — pick a different one.
 
-## 4. 4-button vs 5-button
+## 4. 5-Cherry MX Switch Mechanical Mod & 3D Printed Bracket
+
+For the ultimate *Pixel Riffs* and *Guitar Hero* arcade experience, you can attach a **5-Cherry MX mechanical switch caddy** directly to the top edge of the Cardputer Zero chassis.
+
+```
+       +-------------------------------------------------------+
+       |  [Fret 1]   [Fret 2]   [Fret 3]   [Fret 4]   [Fret 5] |  <- 14.0mm MX Cutouts
+       |   (Green)    (Red)     (Yellow)    (Blue)    (Orange) |
+       +-------------------------------------------------------+
+          |                                                 |
+     [Left Clip]                                       [Right Clip]
+          |                                                 |
+   =======+=================================================+=======
+          |      Cardputer Top Edge & 14-Pin EXT Header     |
+```
+
+### Switch Recommendations
+- **Cherry MX Speed Silver (Linear)**: 1.2 mm actuation travel, 45 cN operating force. Offers the lowest latency for fast trills and consecutive strum notes.
+- **Cherry MX Red (Linear)**: 2.0 mm actuation travel, 45 cN operating force. Traditional smooth feel.
+- **Kailh Choc V1 / V2 (Low Profile)**: Ideal for a slim, compact build that stays flush with the chassis.
+
+### 3D Printable Caddy Specifications
+- **Plate Cutout**: Standard Cherry MX cutout is **14.0 mm × 14.0 mm** with a plate thickness of **1.5 mm**.
+- **Switch Pitch**: 19.05 mm standard keyboard center-to-center spacing.
+- **Header Interface**: 2.54 mm pitch 14-pin female socket glued to the underside of the bracket aligning with the top EXT header.
+- **Wiring**: Solder a common ground bus wire across one pin of all 5 switches to Header Pin 4 (GND). Wire the second pin of each switch to Pins 5, 7, 9, 11, and 13 respectively.
+
+## 5. 4-button vs 5-button
 
 - **5 buttons**: frets 1–5 + strum. Full Guitar Hero style play.
 - **4 buttons**: frets 1–4 + strum, or 4 frets and no strum (set

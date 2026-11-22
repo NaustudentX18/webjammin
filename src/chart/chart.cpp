@@ -94,6 +94,8 @@ bool Chart::load_json_text(const std::string& text, std::string& error) {
         note.lane = n.get_int("lane", 0);
         note.duration_ms = n.get_int("duration_ms", 0);
         note.hopo = n.get_bool("hopo", false);
+        note.open = n.get_bool("open", false);
+        note.star_power = n.get_bool("star_power", false);
         note.midi = n.get_int("midi", 60);
         if (note.lane < 0 || note.lane >= kMaxLanes) {
             error = "note lane out of range: " + std::to_string(note.lane);
@@ -152,6 +154,8 @@ bool Chart::save_json_file(const std::string& path, std::string& error) const {
         nj["lane"] = n.lane;
         nj["duration_ms"] = n.duration_ms;
         nj["hopo"] = n.hopo;
+        nj["open"] = n.open;
+        nj["star_power"] = n.star_power;
         nj["midi"] = n.midi;
         note_arr.push_back(nj);
     }
@@ -181,7 +185,6 @@ bool Chart::load_clone_chart_file(const std::string& path, std::string& error) {
         std::vector<std::string> lines;
     };
     std::vector<Section> sections;
-    // Index, not a pointer: push_back may reallocate the vector.
     int current = -1;
     std::string line;
     std::istringstream text_stream(text);
@@ -200,15 +203,57 @@ bool Chart::load_clone_chart_file(const std::string& path, std::string& error) {
         if (current >= 0) sections[static_cast<size_t>(current)].lines.push_back(trimmed);
     }
 
+    double resolution = 192.0;
+
+    // Parse [Song] metadata
+    for (const auto& s : sections) {
+        if (s.name != "Song") continue;
+        for (const auto& l : s.lines) {
+            const size_t eq = l.find('=');
+            if (eq == std::string::npos) continue;
+            std::string key = l.substr(0, eq);
+            std::string val = l.substr(eq + 1);
+            auto trim = [](std::string& str) {
+                while (!str.empty() && (str.front() == ' ' || str.front() == '\t' || str.front() == '\"')) str.erase(str.begin());
+                while (!str.empty() && (str.back() == ' ' || str.back() == '\t' || str.back() == '\"')) str.pop_back();
+            };
+            trim(key);
+            trim(val);
+            if (key == "Name" && !val.empty()) title = val;
+            else if (key == "Artist" && !val.empty()) artist = val;
+            else if (key == "Charter" && !val.empty()) charter = val;
+            else if (key == "Resolution") {
+                double r = std::atof(val.c_str());
+                if (r > 0.0) resolution = r;
+            }
+        }
+    }
+
     // Tempo map: tick → BPM.
     std::vector<std::pair<double, double>> tempo_events;
     for (const auto& s : sections) {
         if (s.name != "SyncTrack") continue;
         for (const auto& l : s.lines) {
-            std::istringstream ls(l);
-            double tick = 0, bpm = 0;
-            if (!(ls >> tick >> bpm)) continue;
-            if (bpm > 0) tempo_events.emplace_back(tick, bpm);
+            const size_t eq = l.find('=');
+            if (eq != std::string::npos) {
+                const std::string left = l.substr(0, eq);
+                const std::string right = l.substr(eq + 1);
+                double tick = std::atof(left.c_str());
+                std::istringstream rs(right);
+                std::string type;
+                double val = 0;
+                if (rs >> type >> val) {
+                    if (type == "B" && val > 0) {
+                        tempo_events.emplace_back(tick, val / 1000.0);
+                    }
+                }
+            } else {
+                std::istringstream ls(l);
+                double tick = 0, bpm_val = 0;
+                if (ls >> tick >> bpm_val && bpm_val > 0) {
+                    tempo_events.emplace_back(tick, bpm_val);
+                }
+            }
         }
     }
     std::sort(tempo_events.begin(), tempo_events.end());
@@ -220,11 +265,11 @@ bool Chart::load_clone_chart_file(const std::string& path, std::string& error) {
         double prev_bpm = tempo_events.front().second;
         for (const auto& te : tempo_events) {
             if (te.first >= tick) break;
-            ms += (te.first - prev_tick) / (prev_bpm / 60.0 * kTicksPerBeat) * 1000.0;
+            ms += (te.first - prev_tick) / (prev_bpm / 60.0 * resolution) * 1000.0;
             prev_tick = te.first;
             prev_bpm = te.second;
         }
-        ms += (tick - prev_tick) / (prev_bpm / 60.0 * kTicksPerBeat) * 1000.0;
+        ms += (tick - prev_tick) / (prev_bpm / 60.0 * resolution) * 1000.0;
         return ms;
     };
 
@@ -234,29 +279,109 @@ bool Chart::load_clone_chart_file(const std::string& path, std::string& error) {
         tempos.push_back(TempoChange{static_cast<int64_t>(tick_to_ms(te.first)), te.second});
     bpm = tempo_events.front().second;
 
-    // Note sections: "<tick> <fret> <sustain> <note>"
-    for (const auto& s : sections) {
-        if (s.name.size() < 4 || s.name.compare(0, 4, "Note") != 0) continue;
-        const int instrument = s.name.size() > 4 ? std::atoi(s.name.c_str() + 4) : 0;
-        if (instrument != 0) continue; // guitar track only
-        for (const auto& l : s.lines) {
+    // Find best single guitar track section
+    const Section* note_sec = nullptr;
+    const std::vector<const char*> preferred_tracks = {
+        "ExpertSingle", "HardSingle", "MediumSingle", "EasySingle", "Single", "Notes", "Note"
+    };
+    for (const char* pref : preferred_tracks) {
+        for (const auto& s : sections) {
+            if (s.name == pref) {
+                note_sec = &s;
+                difficulty = pref;
+                break;
+            }
+        }
+        if (note_sec) break;
+    }
+    if (!note_sec) {
+        for (const auto& s : sections) {
+            if (s.name.find("Single") != std::string::npos || s.name.find("Note") != std::string::npos) {
+                note_sec = &s;
+                difficulty = s.name;
+                break;
+            }
+        }
+    }
+
+    if (!note_sec) {
+        error = "no guitar track found in " + path;
+        return false;
+    }
+
+    std::vector<std::pair<double, double>> star_power_ranges; // [start_tick, end_tick]
+
+    for (const auto& l : note_sec->lines) {
+        const size_t eq = l.find('=');
+        if (eq != std::string::npos) {
+            const std::string left = l.substr(0, eq);
+            const std::string right = l.substr(eq + 1);
+            double tick = std::atof(left.c_str());
+            std::istringstream rs(right);
+            std::string type;
+            int fret = 0;
+            double sustain = 0;
+            if (!(rs >> type >> fret >> sustain)) continue;
+
+            if (type == "S" && fret == 2) {
+                star_power_ranges.emplace_back(tick, tick + sustain);
+                continue;
+            }
+
+            if (type == "N") {
+                if (fret == 5 || fret == 6) {
+                    // Force HOPO / tap toggle on existing notes at this tick
+                    for (auto& n : notes) {
+                        if (std::abs(tick_to_ms(tick) - static_cast<double>(n.time_ms)) < 2.0) {
+                            n.hopo = true;
+                        }
+                    }
+                    continue;
+                }
+
+                ChartNote n;
+                n.time_ms = static_cast<int64_t>(std::llround(tick_to_ms(tick)));
+                if (fret == 7) {
+                    n.open = true;
+                    n.lane = 0;
+                } else if (fret >= 0 && fret < kMaxLanes) {
+                    n.lane = fret;
+                } else {
+                    continue;
+                }
+
+                n.duration_ms = (sustain > 0)
+                    ? static_cast<int>(std::llround(tick_to_ms(tick + sustain) - tick_to_ms(tick)))
+                    : 0;
+                n.midi = 60 + n.lane * 3;
+
+                // Check if inside star power phrase
+                for (const auto& sp : star_power_ranges) {
+                    if (tick >= sp.first && tick <= sp.second) {
+                        n.star_power = true;
+                        break;
+                    }
+                }
+                notes.push_back(n);
+            }
+        } else {
+            // Legacy fallback: "<tick> <fret> <sustain> <pitch>"
             std::istringstream ls(l);
             long tick = 0, fret = 0, sustain = 0, pitch = 0;
             if (!(ls >> tick >> fret >> sustain >> pitch)) continue;
-            if (fret <= 0 || fret > kMaxLanes) continue; // 0 = no note
+            if (fret <= 0 || fret > kMaxLanes) continue;
             ChartNote n;
             n.time_ms = static_cast<int64_t>(std::llround(tick_to_ms(static_cast<double>(tick))));
             n.lane = static_cast<int>(fret) - 1;
-            // Clone Hero sustain is in ticks.
-            n.duration_ms =
-                static_cast<int>(std::llround(tick_to_ms(static_cast<double>(tick + sustain)) -
-                                             tick_to_ms(static_cast<double>(tick))));
+            n.duration_ms = static_cast<int>(std::llround(tick_to_ms(static_cast<double>(tick + sustain)) -
+                                                         tick_to_ms(static_cast<double>(tick))));
             n.midi = static_cast<int>(pitch);
             notes.push_back(n);
         }
     }
+
     if (notes.empty()) {
-        error = "no guitar notes found in " + path;
+        error = "no guitar notes parsed in " + path;
         return false;
     }
     sort();

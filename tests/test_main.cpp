@@ -14,6 +14,10 @@
 #include "game/scoring.hpp"
 #include "input/mapping.hpp"
 #include "render/font.hpp"
+#include "render/framebuffer.hpp"
+#include "render/ui.hpp"
+#include "game/game.hpp"
+#include "app/config.hpp"
 #include "util/fs.hpp"
 #include "util/json.hpp"
 
@@ -94,30 +98,42 @@ WJ_TEST(chart_rejects_bad_lane) {
 }
 
 WJ_TEST(chart_clone_import) {
+    // Authentic standard Clone Hero .chart syntax
     const std::string text =
         "[Song]\n"
         "{\n"
-        "  Name = Test\n"
+        "  Name = \"Pixel Riff Anthem\"\n"
+        "  Artist = \"Retro Band\"\n"
+        "  Resolution = 192\n"
         "}\n"
         "[SyncTrack]\n"
-        "0 120\n"
-        "1920 140\n"
-        "[Note]\n"
-        "0 5 192 67\n"
-        "960 3 0 60\n";
+        "{\n"
+        "  0 = TS 4\n"
+        "  0 = B 120000\n"
+        "  1920 = B 140000\n"
+        "}\n"
+        "[ExpertSingle]\n"
+        "{\n"
+        "  0 = N 0 192\n"
+        "  768 = N 7 0\n"
+        "  960 = N 2 0\n"
+        "}\n";
     const std::string path = "/tmp/wj-test.chart";
     fs::write_file_atomic(path, text);
 
     Chart c;
     std::string err;
     CHECK(c.load_clone_chart_file(path, err));
-    CHECK_EQ(c.note_count(), size_t(2));
-    CHECK_EQ(c.notes[0].lane, 4);
-    CHECK_EQ(c.notes[0].midi, 67);
-    CHECK_EQ(c.notes[1].lane, 2);
+    CHECK_EQ(c.title, std::string("Pixel Riff Anthem"));
+    CHECK_EQ(c.artist, std::string("Retro Band"));
+    CHECK_EQ(c.note_count(), size_t(3));
+    CHECK_EQ(c.notes[0].lane, 0); // Green
+    CHECK(c.notes[0].duration_ms > 0);
+    CHECK(c.notes[1].open); // Open note
+    CHECK_EQ(c.notes[2].lane, 2); // Yellow
     // 192 ticks per beat: tick 960 is 5 beats = 2500 ms at 120 BPM.
     CHECK_EQ(c.notes[0].time_ms, int64_t(0));
-    CHECK_EQ(c.notes[1].time_ms, int64_t(2500));
+    CHECK_EQ(c.notes[2].time_ms, int64_t(2500));
 }
 
 WJ_TEST(judgement_windows) {
@@ -344,6 +360,32 @@ WJ_TEST(song_library_scans_and_caches) {
     CHECK_EQ(lib.entries().size(), size_t(1));
 }
 
+WJ_TEST(song_library_ini_and_audio) {
+    const std::string dir = "/tmp/wj-test-clonesong";
+    fs::mkdir_p(dir);
+    const std::string ini = "[Song]\nname = Pixel Hero\nartist = 8-Bit Band\ncharter = Community\n";
+    fs::write_file_atomic(fs::join(dir, "song.ini"), ini);
+    const std::string chart_text = "[Song]\n{\n  Resolution = 192\n}\n[SyncTrack]\n{\n  0 = B 120000\n}\n[ExpertSingle]\n{\n  0 = N 0 0\n}\n";
+    fs::write_file_atomic(fs::join(dir, "notes.chart"), chart_text);
+    fs::write_file_atomic(fs::join(dir, "song.ogg"), "OggS");
+
+    SongLibrary lib;
+    lib.set_directories({dir});
+    lib.scan();
+    CHECK_EQ(lib.entries().size(), size_t(1));
+    if (!lib.entries().empty()) {
+        CHECK_EQ(lib.entries()[0].title, std::string("Pixel Hero"));
+        CHECK_EQ(lib.entries()[0].artist, std::string("8-Bit Band"));
+        CHECK_EQ(lib.entries()[0].charter, std::string("Community"));
+
+        Chart loaded;
+        std::string err;
+        CHECK(lib.load(lib.entries()[0], loaded, err));
+        CHECK_EQ(loaded.title, std::string("Pixel Hero"));
+        CHECK_EQ(loaded.audio_file, fs::join(dir, "song.ogg"));
+    }
+}
+
 WJ_TEST(catalogue_index_parsing) {
     const std::string manifest =
         R"({"format":"webjammin-catalogue","songs":[
@@ -478,6 +520,155 @@ WJ_TEST(sng_import) {
         CHECK_EQ(c.notes[0].duration_ms, 500);
         CHECK_EQ(c.notes[0].midi, 60);
     }
+}
+
+WJ_TEST(scoring_star_power) {
+    Scoring s;
+    ScoringRules r;
+    s.reset(r);
+    CHECK_EQ(s.multiplier(), 1);
+    CHECK(!s.star_power_active());
+
+    // Hit star power notes
+    for (int i = 0; i < 5; ++i) s.note_hit(Judgement::Perfect, true);
+    CHECK(s.star_power() >= 50);
+
+    // Activate Star Power: doubles multiplier
+    CHECK(s.activate_star_power());
+    CHECK(s.star_power_active());
+    CHECK_EQ(s.multiplier(), 2); // 1x doubled is 2x
+
+    // Combo up to 10
+    for (int i = 0; i < 5; ++i) s.note_hit(Judgement::Perfect, false);
+    CHECK_EQ(s.multiplier(), 4); // 2x doubled is 4x
+
+    // Decay star power
+    s.update_star_power(15000);
+    CHECK(!s.star_power_active());
+    CHECK_EQ(s.multiplier(), 2); // Drops back to base 2x
+}
+
+WJ_TEST(scoring_persistence_by_song) {
+    const std::string path = "/tmp/wj-scores-test.json";
+    Scoring s;
+    ScoringRules r;
+    s.reset(r);
+    for (int i = 0; i < 5; ++i) s.note_hit(Judgement::Perfect);
+    s.save_best(path, "Neon Fret");
+
+    Scoring s2;
+    s2.reset(r);
+    CHECK(s2.load_best(path, "Neon Fret"));
+    CHECK_EQ(s2.best_score(), 500L);
+
+    // Another song shouldn't have scores yet
+    Scoring s3;
+    s3.reset(r);
+    s3.load_best(path, "Midnight Riff");
+    CHECK_EQ(s3.best_score(), 0L);
+}
+
+WJ_TEST(gameplay_play_mode_toggle) {
+    Game g;
+    CHECK(g.play_mode() == PlayMode::Classic);
+    g.toggle_play_mode();
+    CHECK(g.play_mode() == PlayMode::Shredder);
+    g.toggle_play_mode();
+    CHECK(g.play_mode() == PlayMode::Classic);
+
+    g.enter(Screen::SongSelect);
+    InputEvent ev;
+    ev.type = InputType::Menu;
+    ev.action = MenuAction::Pause;
+    ev.value = 1;
+    g.handle_input(ev);
+    CHECK(g.play_mode() == PlayMode::Shredder);
+}
+
+WJ_TEST(gameplay_shredder_chords_and_open_notes) {
+    Game g;
+    GameConfig cfg;
+    cfg.play_mode = PlayMode::Shredder;
+    cfg.windows.perfect_ms = 50;
+    cfg.windows.great_ms = 80;
+    cfg.windows.good_ms = 120;
+    g.set_config(cfg);
+
+    Chart c;
+    c.title = "Chord Test";
+    c.lane_count = 5;
+    // Green (0) + Red (1) chord at 1000ms
+    ChartNote n1; n1.time_ms = 1000; n1.lane = 0; c.notes.push_back(n1);
+    ChartNote n2; n2.time_ms = 1000; n2.lane = 1; c.notes.push_back(n2);
+    // Open note at 2000ms
+    ChartNote n3; n3.time_ms = 2000; n3.lane = 7; n3.open = true; c.notes.push_back(n3);
+    c.sort();
+
+    g.set_chart_for_preview(c);
+    g.enter(Screen::Playing);
+
+    // Strum at 1000ms without holding frets: should fail
+    g.set_preview_time_ms(1000);
+    InputEvent strum_ev;
+    strum_ev.type = InputType::Strum;
+    strum_ev.value = 1;
+    g.handle_input(strum_ev);
+    CHECK_EQ(g.scoring().score(), 0L);
+
+    // Press fret 0 and fret 1, then strum: hits the chord!
+    InputEvent fret0; fret0.type = InputType::Fret; fret0.lane = 0; fret0.value = 1;
+    InputEvent fret1; fret1.type = InputType::Fret; fret1.lane = 1; fret1.value = 1;
+    g.handle_input(fret0);
+    g.handle_input(fret1);
+    g.handle_input(strum_ev);
+    CHECK(g.scoring().score() > 0L);
+    CHECK_EQ(g.scoring().combo(), 1);
+
+    // Open Note at 2000ms: if frets are held, strum fails
+    g.set_preview_time_ms(2000);
+    g.handle_input(strum_ev);
+    CHECK_EQ(g.scoring().combo(), 1);
+
+    // Release frets
+    fret0.value = 0; fret1.value = 0;
+    g.handle_input(fret0);
+    g.handle_input(fret1);
+    // Strum open note with zero frets held: hits!
+    g.handle_input(strum_ev);
+    CHECK_EQ(g.scoring().combo(), 2);
+}
+
+WJ_TEST(config_play_mode_persistence) {
+    const std::string path = "/tmp/wj-config-test.json";
+    Config cfg;
+    cfg.game().play_mode = PlayMode::Shredder;
+    CHECK(cfg.save(path));
+
+    Config cfg2;
+    CHECK(cfg2.load(path, ""));
+    GameConfig gcfg;
+    cfg2.apply_to(gcfg);
+    CHECK(gcfg.play_mode == PlayMode::Shredder);
+}
+
+WJ_TEST(offline_screen_rendering) {
+    std::vector<uint16_t> fb(kScreenWidth * kScreenHeight, 0);
+    Game g;
+    Chart c = make_test_chart();
+    g.set_chart_for_preview(c);
+
+    ui::draw_title(fb.data(), 0, PlayMode::Classic);
+    CHECK(Framebuffer::write_ppm("/tmp/test_title.ppm", fb.data(), kScreenWidth, kScreenHeight));
+
+    ui::draw_song_select(fb.data(), g);
+    CHECK(Framebuffer::write_ppm("/tmp/test_select.ppm", fb.data(), kScreenWidth, kScreenHeight));
+
+    g.set_preview_time_ms(1000);
+    ui::draw_gameplay(fb.data(), g);
+    CHECK(Framebuffer::write_ppm("/tmp/test_gameplay.ppm", fb.data(), kScreenWidth, kScreenHeight));
+
+    ui::draw_results(fb.data(), g);
+    CHECK(Framebuffer::write_ppm("/tmp/test_results.ppm", fb.data(), kScreenWidth, kScreenHeight));
 }
 
 int main() { return wj::test::run_all(); }

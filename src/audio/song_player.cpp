@@ -17,17 +17,30 @@ bool SongPlayer::start(const Chart& chart, const std::string& audio_path, AudioE
     write_pos_ = 0;
     finished_ = false;
     sfx_.clear();
+    use_synth_ = false;
+    use_ogg_ = false;
 
     if (!audio_path.empty()) {
-        std::string wav_err;
-        if (wav_.open(audio_path, wav_err)) {
-            use_synth_ = false;
-            total_ms_ = static_cast<int64_t>(wav_.duration_seconds() * 1000.0);
-            error.clear();
-            return true;
+        const bool is_ogg = (audio_path.size() >= 4 &&
+                             audio_path.substr(audio_path.size() - 4) == ".ogg");
+        if (is_ogg) {
+            std::string ogg_err;
+            if (ogg_.open(audio_path, ogg_err)) {
+                use_ogg_ = true;
+                total_ms_ = static_cast<int64_t>(ogg_.duration_seconds() * 1000.0);
+                error.clear();
+                return true;
+            }
+            error = ogg_err;
+        } else {
+            std::string wav_err;
+            if (wav_.open(audio_path, wav_err)) {
+                total_ms_ = static_cast<int64_t>(wav_.duration_seconds() * 1000.0);
+                error.clear();
+                return true;
+            }
+            error = wav_err;
         }
-        // Fall back to synthesis and report why.
-        error = wav_err;
     } else {
         error.clear();
     }
@@ -40,6 +53,7 @@ bool SongPlayer::start(const Chart& chart, const std::string& audio_path, AudioE
 
 void SongPlayer::stop() {
     wav_.close();
+    ogg_.close();
     write_pos_ = 0;
     finished_ = false;
     sfx_.clear();
@@ -100,6 +114,12 @@ void SongPlayer::update() {
         const int frames = static_cast<int>(std::min<long>(kBlockFrames, target - write_pos_));
         if (use_synth_) {
             synth_.render(write_pos_, block.data(), frames);
+        } else if (use_ogg_) {
+            const int got = ogg_.read(block.data(), frames);
+            if (got < frames) {
+                std::memset(block.data() + got * 2, 0, (frames - got) * 2 * sizeof(int16_t));
+                if (got == 0) finished_ = true;
+            }
         } else {
             const int got = wav_.read(block.data(), frames);
             if (got < frames) {

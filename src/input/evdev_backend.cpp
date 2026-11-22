@@ -26,7 +26,9 @@ std::string device_name_for(const std::string& event_path) {
 }
 
 InputSource classify(const std::string& name, const std::string& path) {
-    const std::string lower = name;
+    std::string lower = name;
+    for (char& c : lower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+
     if (lower.find("bluetooth") != std::string::npos ||
         lower.find("bt ") != std::string::npos ||
         lower.find("btsnoop") != std::string::npos)
@@ -39,10 +41,14 @@ InputSource classify(const std::string& name, const std::string& path) {
         lower.find("joystick") != std::string::npos ||
         lower.find("guitar") != std::string::npos ||
         lower.find("riffstick") != std::string::npos ||
+        lower.find("santroller") != std::string::npos ||
+        lower.find("controller") != std::string::npos ||
+        lower.find("wii") != std::string::npos ||
         lower.find("pico") != std::string::npos ||
         lower.find("8bitdo") != std::string::npos ||
         lower.find("xbox") != std::string::npos ||
-        lower.find("playstation") != std::string::npos)
+        lower.find("playstation") != std::string::npos ||
+        lower.find("pad") != std::string::npos)
         return InputSource::UsbHid;
     return InputSource::Unknown;
 }

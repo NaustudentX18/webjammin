@@ -132,112 +132,248 @@ def starburst(draw, cx, cy, r, colour, rays=12, inner=0.45):
 
 
 # --- the assets ------------------------------------------------------------
+def draw_3d_text(img, x, y, s, scale=6, depth=7):
+    """Draws arcade-style 3D extruded lettering with depth layers and specular highlight."""
+    # Deep shadow
+    for d in range(depth + 3, depth, -1):
+        _draw_text_raw(img, x + d, y + d, s, (6, 6, 12), scale, 1)
+    # 3D extrusion side walls (magenta / retro purple)
+    for d in range(depth, 0, -1):
+        ratio = d / depth
+        r = int(140 + 70 * (1.0 - ratio))
+        g = int(30 + 30 * (1.0 - ratio))
+        b = int(120 + 80 * (1.0 - ratio))
+        _draw_text_raw(img, x + d, y + d, s, (r, g, b), scale, 1)
+    # Outer dark rim
+    for ox in (-1, 0, 1):
+        for oy in (-1, 0, 1):
+            if ox or oy:
+                _draw_text_raw(img, x + ox, y + oy, s, (18, 14, 30), scale, 1)
+    # Front face (electric cyan)
+    _draw_text_raw(img, x, y, s, CYAN, scale, 1)
+    # Top edge highlight (white)
+    _draw_text_raw(img, x, y - 1, s, (240, 250, 255), scale, 1)
+
+
+# --- the assets ------------------------------------------------------------
 def make_logo(path, scale=6, transparent=False):
-    """The wordmark with a guitar neck and a bolt."""
+    """The 3D perspective wordmark with 3D highway motif and lightning bolts."""
     w, h = 640, 200
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0) if transparent else BG + (255,))
     draw = ImageDraw.Draw(img)
+
     if not transparent:
         for i in range(0, h, 4):
-            shade = 14 + (i * 10) // h
-            draw.rectangle([0, i, w, i + 3], fill=(shade, shade - 4, shade + 10))
-        starburst(draw, w // 2, h // 2, 260, (26, 24, 44), rays=14)
-    guitar_neck(img, 18, 14, 44, h - 28, px=4)
-    bolt = [(556, 10), (470, 98), (516, 98), (466, 190), (610, 82), (552, 82)]
-    draw.polygon(bolt, fill=YELLOW)
-    draw.polygon([(x + 4, y + 4) for x, y in bolt], fill=(60, 46, 10))
-    draw.polygon(bolt, fill=YELLOW)
+            shade = 10 + (i * 12) // h
+            draw.rectangle([0, i, w, i + 3], fill=(shade, shade - 3, shade + 12))
+        starburst(draw, w // 2, h // 2, 280, (24, 20, 42), rays=16)
 
+    # 3D perspective highway receding in the background behind the text
+    hw_top_y = 40
+    hw_bot_y = 190
+    hw_top_w = 160
+    hw_bot_w = 420
+    cx = w // 2
+
+    # Draw perspective highway trapezoid
+    for y in range(hw_top_y, hw_bot_y):
+        t = (y - hw_top_y) / (hw_bot_y - hw_top_y)
+        cur_w = int(hw_top_w + t * (hw_bot_w - hw_top_w))
+        lx = cx - cur_w // 2
+        rx = cx + cur_w // 2
+        c_shade = int(18 + t * 20)
+        draw.line([(lx, y), (rx, y)], fill=(c_shade, c_shade, c_shade + 18))
+
+    # Perspective lane lines
+    for lane in range(6):
+        top_lx = cx - hw_top_w // 2 + lane * (hw_top_w // 5)
+        bot_lx = cx - hw_bot_w // 2 + lane * (hw_bot_w // 5)
+        draw.line([(top_lx, hw_top_y), (bot_lx, hw_bot_y)], fill=(60, 60, 95), width=2)
+
+    # Hit line in perspective
+    hit_y = 175
+    t_hit = (hit_y - hw_top_y) / (hw_bot_y - hw_top_y)
+    hit_w = int(hw_top_w + t_hit * (hw_bot_w - hw_top_w))
+    draw.rectangle([cx - hit_w // 2, hit_y, cx + hit_w // 2, hit_y + 3], fill=WHITE)
+
+    # Glowing 5 fret gems at hit line
+    for i, c in enumerate(LANES):
+        lane_w = hit_w // 5
+        gem_cx = cx - hit_w // 2 + i * lane_w + lane_w // 2
+        draw.rectangle([gem_cx - 10, hit_y - 4, gem_cx + 10, hit_y + 4], fill=c)
+        draw.rectangle([gem_cx - 6, hit_y - 2, gem_cx + 6, hit_y], fill=WHITE)
+
+    # Left and Right 3D electric lightning bolts
+    l_bolt = [(46, 20), (18, 98), (38, 98), (14, 182), (72, 84), (46, 84)]
+    draw.polygon([(bx + 3, by + 3) for bx, by in l_bolt], fill=(80, 20, 50))
+    draw.polygon(l_bolt, fill=YELLOW)
+
+    r_bolt = [(w - 46, 20), (w - 18, 98), (w - 38, 98), (w - 14, 182), (w - 72, 84), (w - 46, 84)]
+    draw.polygon([(bx + 3, by + 3) for bx, by in r_bolt], fill=(80, 20, 50))
+    draw.polygon(r_bolt, fill=YELLOW)
+
+    # Prominent 3D Text
     text = "WEBJAMMIN"
-    tw, _ = text_size(text, scale)
-    x = (w - tw) // 2 - 26
-    y = (h - 7 * scale) // 2
-    draw_text(img, x, y, text, CYAN, scale=scale, spacing=1, outline=INK, outline_px=2)
-    # a hot pink underline
-    draw.rectangle([x + 6, y + 7 * scale + 8, x + tw - 6, y + 7 * scale + 12], fill=PINK)
+    tw, th = text_size(text, scale)
+    tx = (w - tw) // 2
+    ty = (h - th) // 2 - 12
+    draw_3d_text(img, tx, ty, text, scale=scale, depth=8)
+
+    # Subtitle badge with retro bevel
+    sub = "RETRO RHYTHM GUITAR"
+    sw, sh = text_size(sub, 2)
+    sx = (w - sw) // 2
+    sy = ty + th + 24
+    draw.rectangle([sx - 12, sy - 4, sx + sw + 12, sy + sh + 4], fill=(16, 16, 26), outline=CYAN, width=2)
+    _draw_text_raw(img, sx, sy, sub, WHITE, scale=2, spacing=1)
+
     img.save(path)
 
 
 def make_icon(path, size=512):
-    """Square app icon: five fret bars and a bolt. No rounded corners."""
+    """Square app icon: 3D perspective highway receding into arcade horizon."""
     img = Image.new("RGB", (size, size), BG)
     draw = ImageDraw.Draw(img)
-    px = size // 64
-    for i in range(0, size, px):
-        v = 10 + (i * 16) // size
-        draw.rectangle([0, i, size, i + px - 1], fill=(v, v - 4, v + 12))
-    # fret bars
-    bar_w = size // 12
-    gap = size // 20
-    total = 5 * bar_w + 4 * gap
-    x0 = (size - total) // 2
-    y0 = int(size * 0.30)
-    for i, c in enumerate(LANES):
-        x = x0 + i * (bar_w + gap)
-        draw.rectangle([x, y0, x + bar_w, y0 + int(size * 0.34)], fill=c)
-    # strings
-    for i in range(5):
-        x = x0 + i * (bar_w + gap) + bar_w // 2
-        draw.rectangle([x, int(size * 0.10), x + max(1, px), int(size * 0.86)], fill=(235, 235, 245))
-    # fret line
-    draw.rectangle([int(size * 0.08), int(size * 0.66), int(size * 0.92), int(size * 0.66) + px * 2],
-                   fill=WHITE)
-    # bolt
-    bolt = [(int(size * 0.72), int(size * 0.06)), (int(size * 0.54), int(size * 0.44)),
-            (int(size * 0.63), int(size * 0.44)), (int(size * 0.48), int(size * 0.62)),
-            (int(size * 0.78), int(size * 0.30)), (int(size * 0.68), int(size * 0.30))]
+
+    for i in range(0, size, 4):
+        v = 8 + (i * 16) // size
+        draw.rectangle([0, i, size, i + 3], fill=(v, v - 3, v + 12))
+
+    # 3D Highway trapezoid
+    top_y = int(size * 0.16)
+    bot_y = int(size * 0.88)
+    top_w = int(size * 0.28)
+    bot_w = int(size * 0.88)
+    cx = size // 2
+
+    for y in range(top_y, bot_y):
+        t = (y - top_y) / (bot_y - top_y)
+        cur_w = int(top_w + t * (bot_w - top_w))
+        draw.line([(cx - cur_w // 2, y), (cx + cur_w // 2, y)], fill=(int(14 + t * 24), int(14 + t * 24), int(24 + t * 32)))
+
+    # Perspective lane lines
+    for lane in range(6):
+        top_lx = cx - top_w // 2 + lane * (top_w // 5)
+        bot_lx = cx - bot_w // 2 + lane * (bot_w // 5)
+        draw.line([(top_lx, top_y), (bot_lx, bot_y)], fill=(65, 65, 105), width=3)
+
+    # Outer neon border
+    draw.line([(cx - top_w // 2, top_y), (cx - bot_w // 2, bot_y)], fill=CYAN, width=4)
+    draw.line([(cx + top_w // 2, top_y), (cx + bot_w // 2, bot_y)], fill=CYAN, width=4)
+
+    # Falling 3D notes
+    import random
+    rnd = random.Random(42)
+    for y_pct in (0.35, 0.52, 0.70):
+        y = int(top_y + y_pct * (bot_y - top_y))
+        t = (y - top_y) / (bot_y - top_y)
+        cur_w = int(top_w + t * (bot_w - top_w))
+        lw = cur_w // 5
+        for lane_idx in range(5):
+            if rnd.random() < 0.45:
+                continue
+            lx = cx - cur_w // 2 + lane_idx * lw + 4
+            nw = lw - 8
+            nh = int(8 + t * 14)
+            c = LANES[lane_idx]
+            draw.rectangle([lx, y, lx + nw, y + nh], fill=c)
+            draw.rectangle([lx + 2, y + 1, lx + nw - 2, y + nh // 3], fill=WHITE)
+
+    # Hit line & Fret buttons
+    hit_y = int(size * 0.78)
+    draw.rectangle([int(size * 0.08), hit_y, int(size * 0.92), hit_y + 6], fill=WHITE)
+
+    # Central 3D Lightning bolt
+    bolt = [(int(size * 0.62), int(size * 0.06)), (int(size * 0.44), int(size * 0.42)),
+            (int(size * 0.55), int(size * 0.42)), (int(size * 0.38), int(size * 0.72)),
+            (int(size * 0.70), int(size * 0.32)), (int(size * 0.58), int(size * 0.32))]
+    draw.polygon([(bx + 5, by + 5) for bx, by in bolt], fill=(60, 20, 10))
     draw.polygon(bolt, fill=YELLOW)
+
+    # 3D "WJ" emblem at the bottom
+    draw_3d_text(img, cx - 46, int(size * 0.81), "WJ", scale=6, depth=6)
     img.save(path)
 
 
 def make_hero(path, w=1280, h=480):
-    """Wide banner: the highway with notes falling into the fret bar."""
+    """Wide banner: the 3D perspective highway with glowing notes and 3D logo."""
     img = Image.new("RGB", (w, h), BG)
     draw = ImageDraw.Draw(img)
-    px = 4
-    for i in range(0, h, px):
-        v = 8 + (i * 14) // h
-        draw.rectangle([0, i, w, i + px - 1], fill=(v, v - 3, v + 12))
-    starburst(draw, w // 2, h // 2, 620, (22, 20, 40), rays=18)
 
-    # highway
-    hx0, hx1 = int(w * 0.12), int(w * 0.88)
-    top, bottom = int(h * 0.14), int(h * 0.80)
-    draw.rectangle([hx0, top, hx1, bottom], fill=(22, 22, 34))
-    lanes = 5
-    lw = (hx1 - hx0) // lanes
-    for i in range(1, lanes):
-        draw.rectangle([hx0 + i * lw, top, hx0 + i * lw + 2, bottom], fill=(58, 58, 84))
-    # hit line
-    draw.rectangle([hx0, bottom - 4, hx1, bottom], fill=WHITE)
-    # falling notes
+    for i in range(0, h, 4):
+        v = 6 + (i * 14) // h
+        draw.rectangle([0, i, w, i + 3], fill=(v, v - 3, v + 12))
+    starburst(draw, w // 2, h // 2, 640, (20, 18, 38), rays=20)
+
+    # 3D Highway trapezoid
+    top_y = int(h * 0.16)
+    bot_y = int(h * 0.84)
+    top_w = int(w * 0.32)
+    bot_w = int(w * 0.82)
+    cx = w // 2
+
+    for y in range(top_y, bot_y):
+        t = (y - top_y) / (bot_y - top_y)
+        cur_w = int(top_w + t * (bot_w - top_w))
+        lx = cx - cur_w // 2
+        rx = cx + cur_w // 2
+        c_shade = int(14 + t * 22)
+        draw.line([(lx, y), (rx, y)], fill=(c_shade, c_shade, c_shade + 18))
+
+    # Perspective lane lines
+    for lane in range(6):
+        top_lx = cx - top_w // 2 + lane * (top_w // 5)
+        bot_lx = cx - bot_w // 2 + lane * (bot_w // 5)
+        draw.line([(top_lx, top_y), (bot_lx, bot_y)], fill=(60, 60, 95), width=3)
+
+    # Highway borders (neon cyan electric pulse)
+    draw.line([(cx - top_w // 2, top_y), (cx - bot_w // 2, bot_y)], fill=CYAN, width=4)
+    draw.line([(cx + top_w // 2, top_y), (cx + bot_w // 2, bot_y)], fill=CYAN, width=4)
+
+    # Falling notes with perspective scaling
     import random
     rnd = random.Random(1337)
-    for i in range(lanes):
-        x = hx0 + i * lw + 6
-        for k in range(6):
-            yy = top + 30 + k * 70 - 30
-            if yy > bottom - 20:
+    for k in range(8):
+        y = top_y + 30 + k * 44
+        if y >= bot_y - 20:
+            continue
+        t = (y - top_y) / (bot_y - top_y)
+        cur_w = int(top_w + t * (bot_w - top_w))
+        lw = cur_w // 5
+        nh = int(7 + t * 12)
+        for i in range(5):
+            if rnd.random() < 0.42:
                 continue
-            if rnd.random() < 0.45:
-                continue
-            wgt = 40 if rnd.random() < 0.7 else 20
-            draw.rectangle([x, yy, x + lw - 12, yy + 14], fill=LANES[i])
+            x = cx - cur_w // 2 + i * lw + 6
+            nw = lw - 12
+            draw.rectangle([x, y, x + nw, y + nh], fill=LANES[i])
+            draw.rectangle([x + 2, y + 1, x + nw - 2, y + nh // 3], fill=WHITE)
+            # Sustain tail
             if rnd.random() < 0.3:
-                draw.rectangle([x + 8, yy + 14, x + 20, yy + 60], fill=LANES[i])
-    # fret bar
-    fb = int(h * 0.82)
+                draw.rectangle([x + nw // 3, y - 28, x + 2 * nw // 3, y], fill=LANES[i])
+
+    # Hit line
+    hit_y = int(bot_y - 12)
+    draw.rectangle([cx - bot_w // 2, hit_y, cx + bot_w // 2, hit_y + 4], fill=WHITE)
+
+    # Fret buttons with hit sparks
+    bot_lane_w = bot_w // 5
     for i, c in enumerate(LANES):
-        cx = hx0 + i * lw + lw // 2
-        bw = int(lw * 0.62)
-        draw.rectangle([cx - bw // 2, fb, cx + bw // 2, fb + 46], outline=c, width=4)
-    # logo, top-left (transparent variant so it sits on the artwork)
+        gem_x = cx - bot_w // 2 + i * bot_lane_w + bot_lane_w // 2
+        bw = int(bot_lane_w * 0.6)
+        draw.rectangle([gem_x - bw // 2, bot_y, gem_x + bw // 2, bot_y + 36], fill=(20, 20, 32), outline=c, width=3)
+        # Spark particles on green and red
+        if i in (0, 1):
+            draw.rectangle([gem_x - 4, hit_y - 10, gem_x + 4, hit_y - 4], fill=WHITE)
+            draw.rectangle([gem_x - 12, hit_y - 6, gem_x - 6, hit_y], fill=YELLOW)
+            draw.rectangle([gem_x + 6, hit_y - 8, gem_x + 12, hit_y - 2], fill=ORANGE)
+
+    # 3D Logo floating prominently in the top header
     logo_path = os.path.join(OUT, "logo-mark.png")
-    make_logo(logo_path, transparent=True)
+    make_logo(logo_path, scale=5, transparent=True)
     logo = Image.open(logo_path).convert("RGBA")
-    logo = logo.resize((int(logo.width * 0.62), int(logo.height * 0.62)), Image.NEAREST)
     img = img.convert("RGBA")
-    img.alpha_composite(logo, (24, 16))
+    img.alpha_composite(logo, (w // 2 - logo.width // 2, 12))
     img.convert("RGB").save(path)
 
 

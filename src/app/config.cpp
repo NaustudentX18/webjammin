@@ -70,6 +70,10 @@ bool Config::load(const std::string& user_path, const std::string& system_path) 
         game_.lead_in_ms = g.get_int("lead_in_ms", game_.lead_in_ms);
         game_.music_volume = static_cast<float>(g.get_number("music_volume", game_.music_volume));
         game_.sfx_volume = static_cast<float>(g.get_number("sfx_volume", game_.sfx_volume));
+        if (g.has("play_mode")) {
+            const std::string pm = g.get_string("play_mode", "classic");
+            game_.play_mode = (pm == "shredder") ? PlayMode::Shredder : PlayMode::Classic;
+        }
     }
 
     if (root.has("catalogue")) {
@@ -175,6 +179,7 @@ void Config::apply_to(GameConfig& cfg) const {
     cfg.music_volume = audio_.music_volume;
     cfg.sfx_volume = audio_.sfx_volume;
     cfg.lead_in_ms = game_.lead_in_ms;
+    cfg.play_mode = game_.play_mode;
 }
 
 bool Config::save(const std::string& path) const {
@@ -204,6 +209,7 @@ bool Config::save(const std::string& path) const {
     g["strum_required"] = game_.strum_required;
     g["overstrum_penalty"] = game_.overstrum_penalty;
     g["lead_in_ms"] = game_.lead_in_ms;
+    g["play_mode"] = game_.play_mode == PlayMode::Shredder ? "shredder" : "classic";
     root["gameplay"] = g;
 
     Json gpio;
