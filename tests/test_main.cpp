@@ -7,6 +7,7 @@
 #include "app/catalogue.hpp"
 #include "chart/chart.hpp"
 #include "chart/midi.hpp"
+#include "chart/sng.hpp"
 #include "chart/generator.hpp"
 #include "chart/song_library.hpp"
 #include "game/judgement.hpp"
@@ -443,6 +444,39 @@ WJ_TEST(midi_import) {
         CHECK_EQ(c.notes[0].midi, 60);
         // 480 ticks at 120 BPM = 500 ms.
         CHECK_EQ(c.notes[0].duration_ms, 500);
+    }
+}
+
+WJ_TEST(sng_import) {
+    // A minimal StepMania .sng: one measure, one track, one note.
+    std::string m;
+    auto u32 = [&](uint32_t v) {
+        for (int i = 0; i < 4; ++i) m.push_back(static_cast<char>((v >> (i * 8)) & 0xff));
+    };
+    m += "SNG";
+    m.push_back(0);
+    u32(0x0100); // version
+    u32(0x0001); // type: song
+    u32(1);      // measures
+    u32(1);      // tracks
+    u32(10);     // channels
+    // track block: note present
+    m.push_back(0x01);
+    m.push_back(0x00); // note flags (not percussion)
+    m.push_back(0x00); // measure within measure
+    m.push_back(0x30); // beat: 48 == one quarter note
+    m.push_back(60);  // pitch
+    m.push_back(48);  // duration: one beat
+
+    Chart c;
+    std::string err;
+    CHECK(load_sng_data(m, 5, c, err));
+    CHECK_EQ(c.note_count(), size_t(1));
+    if (c.note_count() == 1) {
+        // 120 BPM: one beat = 500 ms.
+        CHECK_EQ(c.notes[0].time_ms, int64_t(500));
+        CHECK_EQ(c.notes[0].duration_ms, 500);
+        CHECK_EQ(c.notes[0].midi, 60);
     }
 }
 

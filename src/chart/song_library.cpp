@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "chart/midi.hpp"
+#include "chart/sng.hpp"
 #include "util/fs.hpp"
 #include "util/json.hpp"
 
@@ -42,7 +43,7 @@ void collect(const std::string& dir, std::vector<std::string>& out, int depth) {
 
 bool SongLibrary::is_chart_file(const std::string& path) {
     const std::string ext = fs::extension(path);
-    if (ext == "chart" || ext == "mid" || ext == "midi") return true;
+    if (ext == "chart" || ext == "mid" || ext == "midi" || ext == "sng") return true;
     if (ext != "json") return false;
     // Accept .wj.json and song.json; ignore other json files.
     const std::string base = fs::basename(path);
@@ -137,6 +138,8 @@ void SongLibrary::scan() {
             if (!chart.load_clone_chart_file(path, err)) continue;
         } else if (ext == "mid" || ext == "midi") {
             if (!load_midi_file(path, 5, chart, err)) continue;
+        } else if (ext == "sng") {
+            if (!load_sng_file(path, 5, chart, err)) continue;
         } else {
             if (!chart.load_json_file(path, err)) continue;
         }
@@ -163,6 +166,7 @@ bool SongLibrary::load(const SongEntry& entry, Chart& out, std::string& error) c
     const std::string ext = fs::extension(entry.path);
     if (ext == "chart") return out.load_clone_chart_file(entry.path, error);
     if (ext == "mid" || ext == "midi") return load_midi_file(entry.path, 5, out, error);
+    if (ext == "sng") return load_sng_file(entry.path, 5, out, error);
     return out.load_json_file(entry.path, error);
 }
 

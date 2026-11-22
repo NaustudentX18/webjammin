@@ -147,6 +147,7 @@ Full field reference: **[CHART_FORMAT.md](CHART_FORMAT.md)**.
 | `.wj.json` / `song.json` | native, full fidelity |
 | `.chart` (Clone Hero / YARG) | guitar track imported, sustain preserved |
 | `.mid` (Standard MIDI) | notes extracted, pitches folded onto the fret lanes, percussion skipped |
+| `.sng` (StepMania) | binary chart parsed, tempo map honoured, percussion skipped |
 | `.wav` | streamed as the backing track (16-bit PCM) |
 
 ### The catalogue — download songs straight from a website

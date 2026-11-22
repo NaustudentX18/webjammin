@@ -123,6 +123,13 @@ note-on/note-off pairs become notes, and percussion (channel 10) is skipped.
 Pitches are folded onto the fret lanes by rank, so a piano roll becomes
 playable on four or five frets.
 
+### StepMania `.sng`
+
+The binary StepMania container is parsed directly: the header, the per-measure
+and per-track blocks, note events, tempo changes and time signatures. Notes are
+converted to milliseconds through the tempo map and folded onto the fret lanes
+by pitch rank. Percussion notes are skipped.
+
 ### WAV audio
 
 16-bit PCM only (the format the generator writes and the one `ffmpeg -i song
