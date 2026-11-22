@@ -1,0 +1,4 @@
+build/
+*.o
+*.d
+songs/*.wj.json

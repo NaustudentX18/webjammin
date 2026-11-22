@@ -1,0 +1,121 @@
+{
+  "format": "webjammin-config",
+  "version": 1,
+
+  "audio": {
+    "device": "plughw:CARD=ES8389Audio,DEV=0",
+    "sample_rate": 48000,
+    "period_frames": 256,
+    "music_volume": 0.85,
+    "sfx_volume": 1.0
+  },
+
+  "timing": {
+    "perfect_ms": 25,
+    "great_ms": 55,
+    "good_ms": 90,
+    "offset_ms": 0
+  },
+
+  "gameplay": {
+    "scroll_speed": 220,
+    "no_fail": false,
+    "hopo_supported": true,
+    "strum_required": false,
+    "overstrum_penalty": true,
+    "lead_in_ms": 1500
+  },
+
+  "catalogue": {
+    "enabled": true,
+    "index_url": "",
+    "download_dir": "~/webjammin/songs"
+  },
+
+  "gpio": {
+    "enabled": false,
+    "active_low": true,
+    "debounce_ms": 5,
+    "pins": [
+      { "bcm": 22, "label": "fret1", "lane": 0 },
+      { "bcm": 11, "label": "fret2", "lane": 1 },
+      { "bcm": 10, "label": "fret3", "lane": 2 },
+      { "bcm": 9,  "label": "fret4", "lane": 3 },
+      { "bcm": 7,  "label": "fret5", "lane": 4 },
+      { "bcm": 15, "label": "strum", "strum": true }
+    ]
+  },
+
+  "songs": {
+    "directories": [
+      "~/webjammin/songs",
+      "/opt/webjammin/songs",
+      "songs"
+    ]
+  },
+
+  "paths": {
+    "scores": "~/.local/share/webjammin/scores.json",
+    "cache": "~/.cache/webjammin/songcache.json"
+  },
+
+  "profiles": [
+    {
+      "name": "onboard-46key",
+      "sources": ["keybd"],
+      "frets": [
+        { "code": 2, "lane": 0 },
+        { "code": 3, "lane": 1 },
+        { "code": 4, "lane": 2 },
+        { "code": 5, "lane": 3 },
+        { "code": 6, "lane": 4 }
+      ],
+      "strum": [57],
+      "menu": {
+        "up": [59],
+        "down": [45],
+        "left": [44],
+        "right": [46],
+        "confirm": [28],
+        "back": [1],
+        "pause": [15]
+      }
+    },
+    {
+      "name": "gamepad-usb-bt",
+      "sources": ["usb-hid", "bt-hid"],
+      "frets": [
+        { "code": 304, "lane": 0 },
+        { "code": 305, "lane": 1 },
+        { "code": 307, "lane": 2 },
+        { "code": 308, "lane": 3 },
+        { "code": 310, "lane": 4 }
+      ],
+      "strum": [311, 312],
+      "menu": {
+        "up": [286],
+        "down": [287],
+        "left": [288],
+        "right": [289],
+        "confirm": [304],
+        "back": [1],
+        "pause": [315]
+      }
+    },
+    {
+      "name": "gpio-buttons",
+      "sources": ["gpio"],
+      "frets": [],
+      "strum": [],
+      "menu": {
+        "up": [],
+        "down": [],
+        "left": [],
+        "right": [],
+        "confirm": [],
+        "back": [],
+        "pause": []
+      }
+    }
+  ]
+}

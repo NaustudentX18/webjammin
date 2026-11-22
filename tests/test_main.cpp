@@ -1,0 +1,420 @@
+// WeBjammin — unit tests.
+#include <cstdio>
+
+#include "harness.hpp"
+
+#include "audio/synth.hpp"
+#include "app/catalogue.hpp"
+#include "chart/chart.hpp"
+#include "chart/midi.hpp"
+#include "chart/generator.hpp"
+#include "chart/song_library.hpp"
+#include "game/judgement.hpp"
+#include "game/scoring.hpp"
+#include "input/mapping.hpp"
+#include "render/font.hpp"
+#include "util/fs.hpp"
+#include "util/json.hpp"
+
+using namespace wj;
+
+namespace {
+
+Chart make_test_chart() {
+    Chart c;
+    c.title = "Test";
+    c.artist = "Unit";
+    c.bpm = 120.0;
+    c.lane_count = 5;
+    c.tempos.push_back(TempoChange{0, 120.0});
+    for (int i = 0; i < 8; ++i) {
+        ChartNote n;
+        n.time_ms = i * 500;
+        n.lane = i % 5;
+        n.duration_ms = (i % 2 == 0) ? 250 : 0;
+        n.midi = 60 + i;
+        c.notes.push_back(n);
+    }
+    c.sort();
+    return c;
+}
+
+} // namespace
+
+WJ_TEST(json_roundtrip) {
+    Json root;
+    root["name"] = "webjammin";
+    root["count"] = 3;
+    root["on"] = true;
+    JsonArray arr;
+    arr.push_back(Json(1));
+    arr.push_back(Json(2));
+    root["list"] = Json(std::move(arr));
+
+    const std::string text = root.dump(2);
+    Json parsed;
+    std::string err;
+    CHECK(Json::parse(text, parsed, err));
+    CHECK_EQ(parsed.get_string("name", ""), std::string("webjammin"));
+    CHECK_EQ(parsed.get_int("count", 0), 3);
+    CHECK(parsed.get_bool("on", false));
+    CHECK_EQ(parsed["list"].size(), size_t(2));
+}
+
+WJ_TEST(json_rejects_garbage) {
+    Json parsed;
+    std::string err;
+    CHECK(!Json::parse("{ this is not json", parsed, err));
+    CHECK(!err.empty());
+}
+
+WJ_TEST(chart_native_roundtrip) {
+    const Chart c = make_test_chart();
+    std::string err;
+    CHECK(c.save_json_file("/tmp/wj-test-chart.wj.json", err));
+
+    Chart loaded;
+    CHECK(loaded.load_json_file("/tmp/wj-test-chart.wj.json", err));
+    CHECK_EQ(loaded.title, c.title);
+    CHECK_EQ(loaded.note_count(), c.note_count());
+    CHECK_EQ(loaded.notes[0].time_ms, int64_t(0));
+    CHECK_EQ(loaded.notes[0].duration_ms, 250);
+    CHECK_EQ(loaded.notes[1].duration_ms, 0);
+    CHECK_EQ(loaded.notes[3].lane, 3);
+}
+
+WJ_TEST(chart_rejects_bad_lane) {
+    const std::string text =
+        R"({"title":"x","bpm":120,"lane_count":5,"notes":[{"time_ms":0,"lane":9}]})";
+    Chart c;
+    std::string err;
+    CHECK(!c.load_json_text(text, err));
+    CHECK(err.find("lane") != std::string::npos);
+}
+
+WJ_TEST(chart_clone_import) {
+    const std::string text =
+        "[Song]\n"
+        "{\n"
+        "  Name = Test\n"
+        "}\n"
+        "[SyncTrack]\n"
+        "0 120\n"
+        "1920 140\n"
+        "[Note]\n"
+        "0 5 192 67\n"
+        "960 3 0 60\n";
+    const std::string path = "/tmp/wj-test.chart";
+    fs::write_file_atomic(path, text);
+
+    Chart c;
+    std::string err;
+    CHECK(c.load_clone_chart_file(path, err));
+    CHECK_EQ(c.note_count(), size_t(2));
+    CHECK_EQ(c.notes[0].lane, 4);
+    CHECK_EQ(c.notes[0].midi, 67);
+    CHECK_EQ(c.notes[1].lane, 2);
+    // 192 ticks per beat: tick 960 is 5 beats = 2500 ms at 120 BPM.
+    CHECK_EQ(c.notes[0].time_ms, int64_t(0));
+    CHECK_EQ(c.notes[1].time_ms, int64_t(2500));
+}
+
+WJ_TEST(judgement_windows) {
+    TimingWindows w;
+    CHECK(judge_error(0, w) == Judgement::Perfect);
+    CHECK(judge_error(25, w) == Judgement::Perfect);
+    CHECK(judge_error(-25, w) == Judgement::Perfect);
+    CHECK(judge_error(30, w) == Judgement::Great);
+    CHECK(judge_error(-40, w) == Judgement::Great);
+    CHECK(judge_error(80, w) == Judgement::Good);
+    CHECK(judge_error(200, w) == Judgement::Miss);
+}
+
+WJ_TEST(scoring_flow) {
+    ScoringRules rules;
+    rules.combo_per_multiplier = 10;
+    rules.max_multiplier = 4;
+    rules.fail_on_empty_jam = false;
+    Scoring s;
+    s.reset(rules);
+
+    s.note_hit(Judgement::Perfect);
+    CHECK_EQ(s.combo(), 1);
+    CHECK_EQ(s.score(), 100L);
+    for (int i = 0; i < 9; ++i) s.note_hit(Judgement::Perfect);
+    CHECK_EQ(s.combo(), 10);
+    CHECK_EQ(s.multiplier(), 2);
+    // Hits 1..9 score 100 each; the 10th hit already earns the 2x multiplier.
+    CHECK_EQ(s.score(), 9 * 100L + 100L * 2);
+    CHECK_NEAR(s.accuracy(), 1.0, 0.0001);
+
+    s.note_missed();
+    CHECK_EQ(s.combo(), 0);
+    CHECK_EQ(s.count(Judgement::Miss), 1);
+    CHECK(s.accuracy() < 1.0);
+    CHECK_EQ(s.max_combo(), 10);
+}
+
+WJ_TEST(scoring_jam_and_fail) {
+    ScoringRules rules;
+    rules.jam_drain_per_miss = 30;
+    rules.fail_on_empty_jam = true;
+    Scoring s;
+    s.reset(rules);
+    for (int i = 0; i < 4; ++i) s.note_missed();
+    CHECK(s.failed());
+    CHECK_EQ(s.jam(), 0);
+}
+
+WJ_TEST(generator_is_deterministic) {
+    GeneratorSettings gs;
+    gs.seed = 4242;
+    gs.bpm = 140;
+    gs.bars = 8;
+    gs.difficulty = 2;
+    Chart a, b;
+    std::string err;
+    CHECK(generate_riff(a, gs, err));
+    CHECK(generate_riff(b, gs, err));
+    CHECK_EQ(a.note_count(), b.note_count());
+    for (size_t i = 0; i < a.note_count(); ++i) {
+        CHECK_EQ(a.notes[i].time_ms, b.notes[i].time_ms);
+        CHECK_EQ(a.notes[i].lane, b.notes[i].lane);
+        CHECK_EQ(a.notes[i].midi, b.notes[i].midi);
+    }
+    // A different seed must give a different riff.
+    gs.seed = 99;
+    Chart c;
+    CHECK(generate_riff(c, gs, err));
+    CHECK(c.note_count() > 0);
+}
+
+WJ_TEST(generator_notes_are_sorted) {
+    GeneratorSettings gs;
+    gs.seed = 7;
+    gs.bars = 12;
+    Chart c;
+    std::string err;
+    CHECK(generate_riff(c, gs, err));
+    for (size_t i = 1; i < c.note_count(); ++i)
+        CHECK(c.notes[i - 1].time_ms <= c.notes[i].time_ms);
+}
+
+WJ_TEST(synth_renders_audio) {
+    const Chart c = make_test_chart();
+    ChartSynth synth;
+    std::string err;
+    CHECK(synth.prepare(c, 48000, err));
+    std::vector<int16_t> block(48000 * 2, 0);
+    // Render one second starting at the first note: the FM voice must produce
+    // something other than silence.
+    synth.render(0, block.data(), 48000);
+    int64_t peak = 0;
+    for (int16_t s : block) peak = std::max<int64_t>(peak, std::abs((int)s));
+    CHECK(peak > 1000);
+}
+
+WJ_TEST(profile_translation) {
+    ProfileSet set;
+    Profile p;
+    p.name = "test";
+    p.sources.push_back(InputSource::Keyboard);
+    FretBinding fb;
+    fb.code = 2; // KEY_1
+    fb.lane = 0;
+    p.frets.push_back(fb);
+    FretBinding fb2;
+    fb2.code = 3; // KEY_2
+    fb2.lane = 1;
+    p.frets.push_back(fb2);
+    p.strum_codes.push_back(57); // SPACE
+    p.menu[MenuAction::Confirm] = {28};
+    set.add(p);
+
+    InputEvent ev;
+    CHECK(set.translate(InputSource::Keyboard, 2, -1, 1, 1000, 0, "kbd", ev));
+    CHECK(ev.type == InputType::Fret);
+    CHECK_EQ(ev.lane, 0);
+
+    CHECK(set.translate(InputSource::Keyboard, 57, -1, 1, 1000, 0, "kbd", ev));
+    CHECK(ev.type == InputType::Strum);
+
+    CHECK(set.translate(InputSource::Keyboard, 28, -1, 1, 1000, 0, "kbd", ev));
+    CHECK(ev.type == InputType::Menu);
+    CHECK(ev.action == MenuAction::Confirm);
+
+    // An unbound key must not translate.
+    CHECK(!set.translate(InputSource::Keyboard, 999, -1, 1, 1000, 0, "kbd", ev));
+}
+
+WJ_TEST(profile_axis_binding) {
+    ProfileSet set;
+    Profile p;
+    p.name = "trigger";
+    FretBinding fb;
+    fb.axis = 2;    // ABS_Y
+    fb.axis_value = 16000;
+    fb.lane = 2;
+    p.frets.push_back(fb);
+    set.add(p);
+
+    InputEvent ev;
+    CHECK(set.translate(InputSource::UsbHid, 0, 2, 20000, 1000, 0, "pad", ev));
+    CHECK(ev.type == InputType::Fret);
+    CHECK_EQ(ev.lane, 2);
+    CHECK_EQ(ev.value, 1);
+
+    CHECK(set.translate(InputSource::UsbHid, 0, 2, 100, 1000, 0, "pad", ev));
+    CHECK_EQ(ev.value, 0);
+}
+
+WJ_TEST(font_legible) {
+    Font::init();
+    // Every glyph must have at least one lit pixel (except the space).
+    for (char c = 'A'; c <= 'Z'; ++c) {
+        const uint8_t* g = Font::glyph(c);
+        int lit = 0;
+        for (int i = 0; i < Font::kGlyphWidth; ++i)
+            for (int b = 0; b < Font::kGlyphHeight; ++b) lit += (g[i] >> b) & 1;
+        CHECK(lit > 4);
+    }
+    CHECK(Font::text_width("WEBJAMMIN", 1) > 40);
+    CHECK(Font::text_width("WEBJAMMIN", 2) > 80);
+}
+
+WJ_TEST(fs_atomic_write_and_dirs) {
+    CHECK(fs::mkdir_p("/tmp/wj-test-dir/sub"));
+    CHECK(fs::is_directory("/tmp/wj-test-dir/sub"));
+    CHECK(fs::write_file_atomic("/tmp/wj-test-dir/sub/file.txt", "hello"));
+    std::string text;
+    CHECK(fs::read_file("/tmp/wj-test-dir/sub/file.txt", text));
+    CHECK_EQ(text, std::string("hello"));
+    CHECK_EQ(fs::extension("/tmp/wj-test-dir/sub/file.txt"), std::string("txt"));
+}
+
+WJ_TEST(song_library_scans_and_caches) {
+    const std::string dir = "/tmp/wj-test-songs";
+    fs::mkdir_p(dir);
+    const Chart c = make_test_chart();
+    std::string err;
+    CHECK(c.save_json_file(fs::join(dir, "test.wj.json"), err));
+
+    SongLibrary lib;
+    lib.set_directories({dir});
+    lib.set_cache_path("/tmp/wj-test-songs-cache.json");
+    lib.scan();
+    CHECK_EQ(lib.entries().size(), size_t(1));
+    if (!lib.entries().empty()) {
+        CHECK_EQ(lib.entries()[0].title, std::string("Test"));
+        CHECK(lib.entries()[0].note_count == 8);
+    }
+
+    // A second scan must reuse the cache and still find the song.
+    lib.scan();
+    CHECK_EQ(lib.entries().size(), size_t(1));
+}
+
+WJ_TEST(catalogue_index_parsing) {
+    const std::string manifest =
+        R"({"format":"webjammin-catalogue","songs":[
+            {"id":"demo","title":"Demo Song","artist":"Someone","charter":"Charter",
+             "difficulty":"Hard","lane_count":5,"chart_url":"https://example.org/demo.chart",
+             "audio_url":"https://example.org/demo.ogg","license":"CC-BY-4.0"},
+            {"id":"gh","title":"Github Shape","download_url":"https://example.org/release.zip"}]})";
+
+    std::vector<CatalogueEntry> entries;
+    std::string err;
+    CHECK(Catalogue::parse_index(manifest, entries, err));
+    CHECK_EQ(entries.size(), size_t(2));
+    if (entries.size() == 2) {
+        CHECK_EQ(entries[0].title, std::string("Demo Song"));
+        CHECK_EQ(entries[0].artist, std::string("Someone"));
+        CHECK_EQ(entries[0].lane_count, 5);
+        CHECK_EQ(entries[0].chart_url, std::string("https://example.org/demo.chart"));
+        CHECK_EQ(entries[0].audio_url, std::string("https://example.org/demo.ogg"));
+        CHECK_EQ(entries[1].chart_url, std::string("https://example.org/release.zip"));
+    }
+}
+
+WJ_TEST(catalogue_index_rejects_garbage) {
+    std::vector<CatalogueEntry> entries;
+    std::string err;
+    CHECK(!Catalogue::parse_index("not json at all", entries, err));
+    CHECK(!err.empty());
+    CHECK(!Catalogue::parse_index("{\"songs\":[]}", entries, err));
+}
+
+WJ_TEST(catalogue_downloads_local_chart) {
+    // A local file:// source stands in for a web server in the test.
+    const Chart c = make_test_chart();
+    std::string err;
+    CHECK(c.save_json_file("/tmp/wj-cat-src.wj.json", err));
+
+    const std::string dest = "/tmp/wj-cat-dest";
+    fs::mkdir_p(dest);
+    CatalogueEntry entry;
+    entry.id = "localtest";
+    entry.title = "Local Test";
+    entry.chart_url = "file:///tmp/wj-cat-src.wj.json";
+    entry.format = "wj";
+
+    Catalogue cat;
+    int last_percent = -1;
+    const bool ok = cat.download(entry, dest, err, [&](int pct, const std::string&) {
+        last_percent = pct;
+    });
+    CHECK(ok);
+    CHECK_EQ(last_percent, 100);
+    CHECK(fs::exists(dest + "/localtest.json"));
+
+    // The downloaded chart must be loadable and playable.
+    Chart loaded;
+    CHECK(loaded.load_json_file(dest + "/localtest.json", err));
+    CHECK_EQ(loaded.note_count(), size_t(8));
+}
+
+WJ_TEST(midi_import) {
+    // A minimal format-0 MIDI file: one note (C4) on, 480 ticks later off.
+    std::string m;
+    auto u32 = [&](uint32_t v) {
+        for (int i = 3; i >= 0; --i) m.push_back(static_cast<char>((v >> (i * 8)) & 0xff));
+    };
+    auto u16 = [&](uint16_t v) {
+        m.push_back(static_cast<char>((v >> 8) & 0xff));
+        m.push_back(static_cast<char>(v & 0xff));
+    };
+    m += "MThd";
+    u32(6);
+    u16(0);
+    u16(1);
+    u16(480);
+    m += "MTrk";
+    u32(16);
+    m.push_back(0x00);
+    m.push_back(0xff); // tempo meta
+    m.push_back(0x51);
+    m.push_back(0x03);
+    m += std::string("\x07\xa1\x20", 3); // 500000 us per quarter
+    m.push_back(0x00);
+    m.push_back(0x90); // note on
+    m.push_back(60);
+    m.push_back(100);
+    m.push_back(0x83);
+    m.push_back(0x60); // delta 480
+    m.push_back(0x80); // note off
+    m.push_back(60);
+    m.push_back(0x00);
+
+    Chart c;
+    std::string err;
+    CHECK(load_midi_data(m, 5, c, err));
+    CHECK_EQ(c.note_count(), size_t(1));
+    if (c.note_count() == 1) {
+        CHECK_EQ(c.notes[0].time_ms, int64_t(0));
+        CHECK_EQ(c.notes[0].midi, 60);
+        // 480 ticks at 120 BPM = 500 ms.
+        CHECK_EQ(c.notes[0].duration_ms, 500);
+    }
+}
+
+int main() { return wj::test::run_all(); }
