@@ -1,266 +1,158 @@
-# WeBjammin
+<p align="center">
+  <img src="site/assets/logo.png" alt="WeBjammin" width="640">
+</p>
 
-**A keyboard-driven pixel rhythm game for the M5Stack Cardputer Zero.**
+<p align="center">
+  <b>A keyboard-driven pixel rhythm game for the M5Stack Cardputer Zero.</b><br>
+  <i>Five frets under the panel. A 320 × 170 highway. Songs you download from a catalogue.</i>
+</p>
 
-> Repository: <https://github.com/NaustudentX18/webjammin> ·
-> Landing page: `site/index.html` (open it over any static server) ·
-> First release: `v0.1.0`
+<p align="center">
+  <img src="site/assets/hero.png" alt="The WeBjammin highway: notes falling into five coloured fret buttons" width="900">
+</p>
 
-Five frets, one strum, a 320 × 170 pixel highway and songs that are
-synthesised from their own charts — so the note you hear and the note you
-press are the same event, and nothing drifts over a four-minute song.
-
-Built for the Cardputer Zero's real constraints: a 1 GHz quad-core Cortex-A53
-with **512 MB of RAM**, a **320 × 170** panel, a **46-key keypad**, and one
-ALSA codec (ES8389).
-
-```
-   ┌──────────────────────────────────────────────┐
-   │  12,340                    x4          97.2%  │  ← score / combo / accuracy
-   │  ████████████████████░░░░░░░░░░░░░░░░░░░░  │  ← jam meter
-   │      ┌────┬────┬────┬────┬────┐              │
-   │      │ ▓▓ │ ▓▓ │    │ ▓▓ │    │              │  ← the highway
-   │      │ ▓▓ │    │    │    │ ▓▓ │              │
-   │ ═════╧════╧════╧════╧════╧════  hit line   │
-   │      [1]  [2]  [3]  [4]  [5]                 │  ← the keys under the panel
-   └──────────────────────────────────────────────┘
-```
+<p align="center">
+  <a href="https://github.com/NaustudentX18/webjammin/releases/tag/v0.1.0"><img alt="release" src="https://img.shields.io/github/v/release/NaustudentX18/webjammin?label=release&color=78dcff"></a>
+  <a href="https://github.com/NaustudentX18/webjammin"><img alt="language" src="https://img.shields.io/github/languages/top/NaustudentX18/webjammin?color=78dcff&label=language"></a>
+  <a href="LICENSE"><img alt="licence" src="https://img.shields.io/badge/license-MIT-ff5aaa?label=licence"></a>
+  <a href="#build"><img alt="build" src="https://img.shields.io/badge/build-make%20%2B%20g%2B%2B-78dcff?label=build"></a>
+  <a href="#build"><img alt="tests" src="https://img.shields.io/badge/tests-22%20passing-3cdc5a?label=tests"></a>
+  <img alt="platform" src="https://img.shields.io/badge/platform-Debian%20arm64-78dcff?label=platform">
+</p>
 
 ---
 
-## 1. What it does
+## Screens
+
+| Title | Song browser | Gameplay | On the device |
+|---|---|---|---|
+| <img src="site/assets/screen-title.png" width="260" alt="title screen"> | <img src="site/assets/screen-songselect.png" width="260" alt="song browser"> | <img src="site/assets/screen-gameplay.png" width="260" alt="gameplay"> | <img src="site/assets/device-title.png" width="260" alt="running on the Cardputer Zero"> |
+
+The last frame is a real capture from `/dev/fb0` on the unit, not a mock-up.
+
+---
+
+## Why this hardware
+
+The Cardputer Zero's **`4 5 6 7 8` keys sit directly under its 1.9-inch
+panel** — the vendor's own layout guide tells app authors to put their five
+primary action icons exactly there. That makes the panel a fret board and the
+keypad a guitar neck, and it is why a phone-style rhythm game translates to this
+device so cleanly.
 
 | | |
 |---|---|
-| **Gameplay** | 4- or 5-lane note highway, sustain tails, HOPO notes, tap / hopo / strum rules, adjustable scroll speed and calibration offset |
-| **Judgement** | PERFECT ±25 ms, GREAT ±55 ms, GOOD ±90 ms, MISS beyond; score, combo, multiplier (1×–4×), accuracy %, Rock/Jam meter, optional no-fail |
-| **Input** | Onboard 46-key keypad, **GPIO buttons** on the 14-pin EXT header, **USB** HID guitars/gamepads, **Bluetooth** HID controllers — all through one input manager, with hot-plug |
-| **Songs** | `.wj.json` (native), Clone Hero **`.chart`**, Standard MIDI **`.mid`**, streamed WAV audio, and a **built-in procedural generator** so the game is playable with zero downloads |
-| **Catalogue** | Fetch a song **directly from a catalogue website** — point the config at an index URL and download individual songs into the game from the song browser |
-| **Extras** | On-screen input tester + calibration, per-song best scores (atomic JSON), settings, offline screen renderer for screenshots |
+| **Display** | 320 × 170, RGB565, written with one `pwrite` of 108 800 bytes |
+| **Audio** | 48 kHz through the ES8389 (ALSA card 1) — the **playback position is the game clock** |
+| **CPU / RAM** | 1 GHz quad-core Cortex-A53, 512 MB — the game holds well under 48 MB RSS |
+| **Input** | 46-key keypad · GPIO buttons · USB HID · Bluetooth HID, unified and hot-plugged |
 
-## 2. Build
+---
 
-Nothing exotic is needed — the device has `gcc`, `make` and `libasound2-dev`.
+## Features
 
-```bash
-git clone <this repo> webjammin && cd webjammin
-make                       # → build/webjammin
-make test                  # → 20 unit tests
-./build/webjammin --generate-songs songs   # write the three bundled songs
-./build/webjammin --selftest               # diagnostics
-./build/webjammin                         # play
-```
-
-On the Cardputer Zero itself (Debian 13 trixie, arm64):
-
-```bash
-scp -r . fogo@192.168.4.11:/tmp/webjammin
-ssh fogo@192.168.4.11 'cd /tmp/webjammin && make && ./build/webjammin --generate-songs ~/webjammin/songs'
-```
-
-Dependencies: `g++` (C++20), `make`, `libasound2-dev`. `curl` and `unzip` are
-used for catalogue downloads and are present on the device.
-
-## 3. Controls
-
-### Onboard keypad (works out of the box)
-
-| Key | Action |
+| | |
 |---|---|
-| `1` `2` `3` `4` `5` | Frets 1–5 |
-| `SPACE` | Strum |
-| `F` `X` `Z` `C` | Up / down / left / right (the vendor's arrow keys) |
-| `ENTER` | Confirm / start |
-| `ESC` | Back / quit to the song list |
-| `TAB` | Pause |
+| **Gameplay** | 4- or 5-lane highway, sustain tails, HOPO notes, tap / hopo / strum rules, adjustable scroll speed, calibration offset |
+| **Judgement** | PERFECT ±25 ms, GREAT ±55 ms, GOOD ±90 ms, MISS beyond · score, combo, 1×–4× multiplier, live accuracy, Rock/Jam meter, optional no-fail |
+| **Input** | One input manager over four backends: onboard keypad, **GPIO** on the 14-pin EXT header, **USB** HID guitars, **Bluetooth** HID controllers — with hot-plug and an on-screen remapper |
+| **Charts** | `.wj.json` (native) · Clone Hero `.chart` · Standard MIDI `.mid` · StepMania `.sng` · streamed WAV · a **procedural generator** so it plays with zero downloads |
+| **Catalogue** | Point `catalogue.index_url` at a website, browse the songs in-game and **download them one at a time** — `.zip` archives unpacked automatically |
+| **Extras** | Tap-test calibration that writes itself back to the config · per-song best scores in atomic JSON · an offline screen renderer for screenshots |
 
-### GPIO buttons, USB and Bluetooth
+<p align="center">
+  <img src="site/assets/pack-gh3.png" width="200" alt="Guitar Hero III pack">
+  <img src="site/assets/pack-yarg.png" width="200" alt="YARG pack">
+  <img src="site/assets/pack-clonehero.png" width="200" alt="Clone Hero pack">
+  <img src="site/assets/pack-originals.png" width="200" alt="originals">
+</p>
 
-See **[HARDWARE_WIRING.md](HARDWARE_WIRING.md)** — the EXT header pinout, the
-active-low wiring, the default pin map, Bluetooth pairing and the axis
-bindings for guitars that use triggers instead of buttons.
+---
 
-Every binding lives in `~/.config/webjammin/config.json`, so a new guitar or
-button box needs **no recompile**.
+## Build
 
-## 4. Configuration
+```sh
+# Debian 13 (trixie) arm64 — the Cardputer Zero builds it itself
+sudo apt install -y build-essential libasound2-dev curl unzip
 
-Copy the shipped defaults and edit:
+git clone https://github.com/NaustudentX18/webjammin.git
+cd webjammin
+make
+make test
+./build/webjammin --generate-songs ~/webjammin/songs
+./build/webjammin
+```
 
-```bash
+Other targets:
+
+```sh
+make songs                                   # regenerate the bundled songs
+./build/webjammin --selftest                 # devices, songs, a frame-loop test
+./build/webjammin --render gameplay out.ppm  # render any screen offline
+./build/webjammin --fetch-catalogue https://host/catalogue.json
+./build/webjammin --download-catalogue https://host/catalogue.json 0 ~/webjammin/songs
+python3 scripts/catalogue_server.py --charts songs --port 8000   # host a catalogue
+```
+
+### Configure
+
+```sh
 mkdir -p ~/.config/webjammin
 cp config/config.json ~/.config/webjammin/config.json
 ```
 
-| Section | What it holds |
-|---|---|
-| `audio` | ALSA device, sample rate, period size, volumes |
-| `timing` | judgement windows and the calibration offset |
-| `gameplay` | scroll speed, no-fail, HOPO support, overstrum penalty |
-| `catalogue` | index URL and download folder |
-| `gpio` | pin map (BCM numbers), active-low, debounce |
-| `songs` | song directories to scan |
-| `profiles` | controller profiles: key codes / buttons / axes → frets, strum, menu |
+Timing windows, scroll speed, the audio device, the GPIO pin map and the
+controller profiles all live in that one file — a new guitar or button box needs
+**no recompile**. See [`HARDWARE_WIRING.md`](HARDWARE_WIRING.md) for the EXT
+header pinout and Bluetooth pairing, and [`CHART_FORMAT.md`](CHART_FORMAT.md)
+for the chart and catalogue formats.
 
-### The audio device matters
+---
 
-The Cardputer Zero's codec is **ALSA card 1**. `pcm.!default` is PipeWire's
-and will be busy, so the game uses:
-
-```
-plughw:CARD=ES8389Audio,DEV=0
-```
-
-## 5. Charts and songs
-
-### Native format (`.wj.json`)
-
-```json
-{
-  "format": "webjammin-chart",
-  "title": "Neon Fret",
-  "artist": "WeBjammin Synth",
-  "charter": "You",
-  "difficulty": "Normal",
-  "lane_count": 5,
-  "offset_ms": 0,
-  "bpm": 128,
-  "audio_file": "",
-  "synth_patch": "guitar",
-  "synth_seed": 1337,
-  "tempos": [ { "time_ms": 0, "bpm": 128 } ],
-  "notes": [
-    { "time_ms": 500, "lane": 0, "duration_ms": 0, "hopo": false, "midi": 60 }
-  ]
-}
-```
-
-- `audio_file` empty → the song is **synthesised** from the chart (lead voice
-  per note, seeded drum pattern underneath).
-- `audio_file` set → a WAV file next to the chart is streamed instead.
-- `synth_seed` drives the drum pattern, so two songs at the same tempo do not
-  sound alike.
-
-Full field reference: **[CHART_FORMAT.md](CHART_FORMAT.md)**.
-
-### Importing
-
-| Format | Support |
-|---|---|
-| `.wj.json` / `song.json` | native, full fidelity |
-| `.chart` (Clone Hero / YARG) | guitar track imported, sustain preserved |
-| `.mid` (Standard MIDI) | notes extracted, pitches folded onto the fret lanes, percussion skipped |
-| `.sng` (StepMania) | binary chart parsed, tempo map honoured, percussion skipped |
-| `.wav` | streamed as the backing track (16-bit PCM) |
-
-### The catalogue — download songs straight from a website
-
-The song browser has two tabs: **SONGS** (local) and **CATALOGUE**. In the
-catalogue tab, `ENTER` downloads the highlighted song: the chart, and the
-audio when the entry provides one, are fetched straight from the catalogue
-into your song folder, and the song becomes playable immediately.
-
-Set the catalogue in the config:
-
-```json
-"catalogue": {
-  "enabled": true,
-  "index_url": "https://your.host/webjammin/catalogue.json",
-  "download_dir": "~/webjammin/songs"
-}
-```
-
-The index is a small JSON document:
-
-```json
-{ "format": "webjammin-catalogue",
-  "songs": [
-    { "id": "song1", "title": "Song One", "artist": "Artist",
-      "charter": "Charter", "difficulty": "Hard", "lane_count": 5,
-      "chart_url": "https://your.host/charts/song1.chart",
-      "audio_url": "https://your.host/audio/song1.ogg",
-      "license": "CC-BY-4.0" }
-  ] }
-```
-
-Entries may also use the GitHub release shape (`download_url` /
-`browser_download_url`). A `.zip` archive is unpacked automatically and the
-chart inside is picked up. `scripts/catalogue_server.py` turns any directory of
-charts into such an index, so hosting one is a one-liner.
-
-**Rights:** the game downloads exactly what you point it at, one song at a
-time, on request — it ships no third-party charts or audio and contains no
-bulk scraper. You are responsible for holding the rights to the songs you
-fetch; many chart communities distribute charts for songs the user already
-owns.
-
-## 6. Calibration
-
-Audio, video and input never line up perfectly — on the Zero, the panel lags
-the codec by a few milliseconds and the keypad adds more. The calibration
-screen (title → catalogue → back → calibration) plays a steady click and
-records your taps; the median error becomes `timing.offset_ms` in the config.
-
-The same offset is used by the judgement code, so it fixes both the audio and
-the highway. After eight taps the measured offset is written straight back into
-`~/.config/webjammin/config.json` — no editing needed.
-
-## 7. Architecture
-
-```
-src/
-├── util/      json (hand-written), filesystem helpers, monotonic time
-├── chart/     chart model, .wj.json, .chart import, .mid import,
-│              procedural generator, song library + metadata cache
-├── audio/     ALSA engine (ring buffer + writer thread), chart synth,
-│              WAV streaming, song player (the audio clock lives here)
-├── input/     evdev backend (USB/BT/keypad, hot-plug), GPIO backend
-│              (sysfs, edge + debounce), controller profiles, manager
-├── render/    framebuffer (pwrite), 5x7 font, primitives, screens
-├── game/      judgement windows, scoring, state machine + gameplay loop
-└── app/       config, catalogue client, application shell
-```
-
-### Why this stack
+## Why this stack
 
 | Choice | Reason |
 |---|---|
-| **C++20** | Deterministic frame pacing, no GC pauses, low RSS, direct access to Linux input and framebuffer APIs. |
-| **No SDL2** | SDL2 is not installed on the device, and its DRM/framebuffer backends would fight the APPLaunch launcher for `/dev/fb0`. Writing the panel directly is one `pwrite()` of 108 800 bytes. |
-| **No libgpiod** | The kernel already exposes `/sys/class/gpio`; using it means no extra package on the device. |
-| **ALSA directly** | We need the exact playback position (`snd_pcm_delay`) to drive note timing — a game framework would hide it. |
-| **5×7 bitmap font** | No freetype, no font files, no parsing: ~50 glyphs is all a 320×170 panel needs. |
-| **Audio clock as master clock** | Notes are scheduled against frames actually played, so nothing drifts. |
+| **C++20** | Deterministic frame pacing, no GC pauses, low RSS, direct Linux input and framebuffer APIs |
+| **No SDL2** | Not installed on the device, and a DRM backend would fight the APPLaunch launcher for `/dev/fb0` |
+| **No libgpiod** | The kernel already exposes `/sys/class/gpio` — one less package, and remappable at runtime |
+| **Direct ALSA** | The exact playback position (`snd_pcm_delay`) is what drives note timing; a game framework hides it |
+| **5 × 7 bitmap font** | ~50 glyphs, no freetype, no font files — and the same table generates the site art |
 
-### Memory discipline
+---
 
-- Songs are **streamed**: a four-minute track is never decoded into RAM.
-- The synth renders 256-frame blocks on demand.
-- The ring buffer is two seconds of audio (~380 KB).
-- The frame buffer is 108 800 bytes; the renderer allocates nothing per frame.
-- Measured RSS on the device: see `scripts/bench.sh`.
+## Roadmap
 
-## 8. Testing
+| Stage | What |
+|---|---|
+| **Shipped** | Core engine and play loop: four chart formats, audio-locked scheduler, judgement and scoring, four input backends, song browser, catalogue client, calibration, remapper — 22 unit tests green, verified on the device |
+| **Next** | **Career & touring mode** — a venue ladder (eight tiers, three boss battles), setlists built from your catalogue, encore songs gated behind a full-combo clear, score-attack mode |
+| **Planned** | **Versus, ghosts & the band** — hot-seat split highway, LAN races with one device as the timing authority, ghost replays, a local leaderboard, and bass/drum lanes with co-op parts |
+| **Planned** | **Content & tooling** — a chart editor on the 46 keys, a seedable set generator, themes and note skins, and an APPLaunch store release |
 
-```bash
-make test
-```
+---
 
-20 unit tests cover the JSON parser, the chart readers (native, `.chart`,
-`.mid`), the procedural generator's determinism, the judgement windows, the
-scoring rules, the synthesiser, the controller-profile translation (buttons and
-axes), the font, the atomic file writes, the song library cache and the
-catalogue client (including a real download through a local `file://` source).
+## Documentation
 
-```bash
-./build/webjammin --selftest        # devices, songs, a ten-frame loop test
-./build/webjammin --render title out.ppm   # render any screen offline
-scripts/bench.sh                     # frame time and RSS on the device
-```
+| | |
+|---|---|
+| [`README.md`](README.md) | this page |
+| [`HARDWARE_WIRING.md`](HARDWARE_WIRING.md) | EXT header pinout, active-low wiring, Bluetooth and USB guitars, the remapper |
+| [`CHART_FORMAT.md`](CHART_FORMAT.md) | `.wj.json`, `.chart`, `.mid`, `.sng`, WAV and the catalogue index |
+| [`site/`](site/) | the full landing page — open `site/index.html` over any static server |
+| [`docs/screens/`](docs/screens/) | every screen, rendered by the game itself |
 
-## 9. Licence and origin
+---
 
-Original work. The chart formats are implemented for interoperability; no
-assets, audio or chart content from any existing commercial game are
-included or redistributed. See §5 for the catalogue's rights note.
+## Licence & content
+
+Original work, MIT licensed. **No copyrighted audio, charts or artwork is
+included or redistributed.** The catalogue client fetches, on the user's
+explicit request, from a catalogue the user points the game at — there is no
+bulk scraper and no built-in source. The Guitar Hero III track index in the
+landing page is factual metadata (titles and artists) and links to no files.
+
+## Credits
+
+Built for the **M5Stack Cardputer Zero** — a Raspberry Pi CM0 with a 320 × 170
+panel, a 46-key TCA8418 keypad and an ES8389 codec.

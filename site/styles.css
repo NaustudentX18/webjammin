@@ -52,7 +52,11 @@ code, kbd, pre {
   border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; text-decoration: none; }
-.brand img { image-rendering: pixelated; }
+.brand img { image-rendering: pixelated; filter: drop-shadow(0 0 14px rgba(120, 220, 255, .25)); }
+.ver {
+  font-size: 11px; letter-spacing: .14em; font-weight: 700; color: var(--dim);
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px;
+}
 .nav { display: flex; gap: 22px; margin-left: auto; }
 .nav a {
   text-decoration: none; color: var(--dim); font-size: 14px;
@@ -248,7 +252,7 @@ kbd {
 /* ---------------------------------------------------------- footer */
 .footer { border-top: 1px solid var(--line); padding: 34px clamp(16px, 4vw, 48px) 46px; }
 .footer-inner { max-width: 1100px; margin: 0 auto; display: grid; gap: 10px; }
-.footer img { image-rendering: pixelated; opacity: .85; }
+.footer img { image-rendering: pixelated; opacity: .92; filter: drop-shadow(0 0 12px rgba(120, 220, 255, .18)); }
 .footer code { color: var(--cyan); }
 
 /* ---------------------------------------------------------- responsive */

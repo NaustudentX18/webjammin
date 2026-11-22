@@ -132,7 +132,7 @@ def starburst(draw, cx, cy, r, colour, rays=12, inner=0.45):
 
 
 # --- the assets ------------------------------------------------------------
-def make_logo(path, scale=6, transparent=False):
+def make_logo(path, scale=8, transparent=False):
     """The wordmark with a guitar neck and a bolt."""
     w, h = 640, 200
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0) if transparent else BG + (255,))
@@ -142,19 +142,19 @@ def make_logo(path, scale=6, transparent=False):
             shade = 14 + (i * 10) // h
             draw.rectangle([0, i, w, i + 3], fill=(shade, shade - 4, shade + 10))
         starburst(draw, w // 2, h // 2, 260, (26, 24, 44), rays=14)
-    guitar_neck(img, 18, 14, 44, h - 28, px=4)
-    bolt = [(556, 10), (470, 98), (516, 98), (466, 190), (610, 82), (552, 82)]
+    guitar_neck(img, 16, 18, 30, h - 36, px=4)
+    bolt = [(600, 8), (508, 104), (558, 104), (504, 192), (656, 78), (594, 78)]
     draw.polygon(bolt, fill=YELLOW)
     draw.polygon([(x + 4, y + 4) for x, y in bolt], fill=(60, 46, 10))
     draw.polygon(bolt, fill=YELLOW)
 
     text = "WEBJAMMIN"
     tw, _ = text_size(text, scale)
-    x = (w - tw) // 2 - 26
+    x = (w - tw) // 2 - 34
     y = (h - 7 * scale) // 2
     draw_text(img, x, y, text, CYAN, scale=scale, spacing=1, outline=INK, outline_px=2)
     # a hot pink underline
-    draw.rectangle([x + 6, y + 7 * scale + 8, x + tw - 6, y + 7 * scale + 12], fill=PINK)
+    draw.rectangle([x + 4, y + 7 * scale + 10, x + tw - 4, y + 7 * scale + 15], fill=PINK)
     img.save(path)
 
 
