@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "audio/audio_engine.hpp"
+#include "audio/ogg.hpp"
 #include "audio/synth.hpp"
 #include "audio/wav.hpp"
 #include "chart/chart.hpp"
@@ -55,7 +56,9 @@ private:
     AudioEngine* audio_ = nullptr;
     ChartSynth synth_;
     WavStream wav_;
+    OggStream ogg_;
     bool use_synth_ = true;
+    bool use_ogg_ = false;
     int64_t write_pos_ = 0;   // frames handed to the audio engine
     int64_t total_ms_ = 0;
     bool finished_ = false;

@@ -27,6 +27,8 @@
 
 namespace wj {
 
+enum class PlayMode { Classic, Shredder }; // Classic = Tap (Cardputer Keypad), Shredder = Fret + Strum (Cherry mod / Guitar)
+
 struct GameConfig {
     TimingWindows windows;
     int scroll_speed = 220;      // highway pixels per second
@@ -39,6 +41,7 @@ struct GameConfig {
     float sfx_volume = 1.0f;
     int lane_count = 5;
     int lead_in_ms = 1500;       // silence before the first note
+    PlayMode play_mode = PlayMode::Classic;
 };
 
 enum class Screen { Title, SongSelect, Playing, Paused, Results, Calibration, Remap };
@@ -84,6 +87,13 @@ public:
 
     void set_song_dirs(std::vector<std::string> dirs) { song_dirs_ = std::move(dirs); }
     void set_scores_path(std::string path) { scores_path_ = std::move(path); }
+    const std::string& scores_path() const { return scores_path_; }
+
+    PlayMode play_mode() const { return config_.play_mode; }
+    void set_play_mode(PlayMode m) { config_.play_mode = m; }
+    void toggle_play_mode() {
+        config_.play_mode = (config_.play_mode == PlayMode::Classic ? PlayMode::Shredder : PlayMode::Classic);
+    }
     // Sets the play head used by the offline renderer.
     void set_preview_time_ms(int64_t ms) { song_time_ms_ = ms; }
     // Loads a chart for rendering only (offline screenshots, tests).
@@ -132,6 +142,8 @@ private:
     void update_play();
     void handle_play_input(const InputEvent& ev);
     bool try_hit(int lane, int64_t song_ms);
+    bool try_hit_strum(int64_t song_ms);
+    bool try_hit_hopo(int lane, int64_t song_ms);
     void expire_notes(int64_t song_ms);
     void update_calibration(int64_t song_ms);
     void update_remapper();

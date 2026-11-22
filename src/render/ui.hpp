@@ -13,7 +13,7 @@
 
 namespace wj::ui {
 
-void draw_title(uint16_t* fb, int selected);
+void draw_title(uint16_t* fb, int selected, PlayMode mode = PlayMode::Classic);
 void draw_song_select(uint16_t* fb, const Game& game);
 void draw_gameplay(uint16_t* fb, const Game& game);
 void draw_pause_overlay(uint16_t* fb);

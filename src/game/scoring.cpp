@@ -17,9 +17,12 @@ void Scoring::reset(const ScoringRules& rules) {
     failed_ = false;
     total_ = 0;
     perfect_ = great_ = good_ = miss_ = 0;
+    star_power_ = 0;
+    star_power_active_ = false;
+    star_power_duration_ms_ = 0;
 }
 
-void Scoring::note_hit(Judgement j) {
+void Scoring::note_hit(Judgement j, bool star_power_note) {
     ++total_;
     switch (j) {
         case Judgement::Perfect: ++perfect_; break;
@@ -28,7 +31,6 @@ void Scoring::note_hit(Judgement j) {
         default: ++miss_; break;
     }
     if (j == Judgement::Miss) {
-        ++miss_;
         combo_ = 0;
         jam_ = std::max(0, jam_ - rules_.jam_drain_per_miss);
         if (rules_.fail_on_empty_jam && jam_ <= 0) failed_ = true;
@@ -38,8 +40,11 @@ void Scoring::note_hit(Judgement j) {
     max_combo_ = std::max(max_combo_, combo_);
     const int step = rules_.combo_per_multiplier;
     multiplier_ = std::min(rules_.max_multiplier, 1 + combo_ / std::max(1, step));
-    score_ += rules_.base_per_note * multiplier_;
+    score_ += rules_.base_per_note * multiplier();
     jam_ = std::min(100, jam_ + rules_.jam_gain_per_hit);
+    if (star_power_note) {
+        add_star_power(12);
+    }
 }
 
 void Scoring::note_missed() {
@@ -50,8 +55,29 @@ void Scoring::note_missed() {
     if (rules_.fail_on_empty_jam && jam_ <= 0) failed_ = true;
 }
 
+void Scoring::add_star_power(int amount) {
+    star_power_ = std::clamp(star_power_ + amount, 0, 100);
+}
+
+bool Scoring::activate_star_power() {
+    if (star_power_ < 50 || star_power_active_) return false;
+    star_power_active_ = true;
+    star_power_duration_ms_ = (star_power_ * 100); // 50% = 5 sec, 100% = 10 sec
+    star_power_ = 0;
+    return true;
+}
+
+void Scoring::update_star_power(int delta_ms) {
+    if (!star_power_active_) return;
+    star_power_duration_ms_ -= delta_ms;
+    if (star_power_duration_ms_ <= 0) {
+        star_power_duration_ms_ = 0;
+        star_power_active_ = false;
+    }
+}
+
 void Scoring::sustain_tick(int ticks) {
-    score_ += static_cast<long>(ticks) * rules_.sustain_tick * multiplier_;
+    score_ += static_cast<long>(ticks) * rules_.sustain_tick * multiplier();
 }
 
 void Scoring::overstrum() {
@@ -75,31 +101,35 @@ int Scoring::count(Judgement j) const {
     }
 }
 
-bool Scoring::load_best(const std::string& path) {
+bool Scoring::load_best(const std::string& path, const std::string& song_key) {
     best_score_ = 0;
     scores_path_ = path;
+    const std::string key = song_key.empty() ? path : song_key;
     std::string text;
     if (!fs::read_file(path, text)) return false;
     Json root;
     std::string err;
     if (!Json::parse(text, root, err) || !root.is_object()) return false;
-    const Json& entry = root[path];
-    if (entry.is_object()) best_score_ = entry.get_int64("score", 0);
+    if (root.has(key)) {
+        const Json& entry = root[key];
+        if (entry.is_object()) best_score_ = entry.get_int64("score", 0);
+    }
     return true;
 }
 
-void Scoring::save_best(const std::string& path) const {
+void Scoring::save_best(const std::string& path, const std::string& song_key) const {
     if (path.empty()) return;
+    const std::string key = song_key.empty() ? path : song_key;
     std::string text;
     Json root;
     std::string err;
     if (!fs::read_file(path, text) || !Json::parse(text, root, err) || !root.is_object())
         root = Json(JsonObject{});
     Json entry;
-    entry["score"] = best_score_;
+    entry["score"] = score_ > best_score_ ? score_ : best_score_;
     entry["accuracy"] = accuracy();
     entry["max_combo"] = max_combo_;
-    root[path] = entry;
+    root[key] = entry;
     fs::write_file_atomic(path, root.dump(1));
 }
 

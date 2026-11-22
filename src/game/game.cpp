@@ -45,7 +45,7 @@ void Game::start_selected_song() {
     scoring_rules_.overstrum_penalty = config_.overstrum_penalty;
     scoring_rules_.fail_on_empty_jam = !config_.no_fail;
     scoring_.reset(scoring_rules_);
-    if (!scores_path_.empty()) scoring_.load_best(scores_path_);
+    if (!scores_path_.empty()) scoring_.load_best(scores_path_, chart_.title);
 
     hit_flags_.assign(chart_.notes.size(), false);
     note_cursor_ = 0;
@@ -159,16 +159,26 @@ void Game::update_play() {
 
     expire_notes(judge_ms);
 
-    // Sustain ticks.
+    // Active sustain holding & scoring ticks
     for (int lane = 0; lane < kMaxLanes; ++lane) {
-        if (lane_sustain_until_ms_[lane] > 0 && judge_ms >= lane_sustain_until_ms_[lane]) {
-            lane_sustain_until_ms_[lane] = 0;
+        if (lane_sustain_until_ms_[lane] > 0) {
+            if (judge_ms >= lane_sustain_until_ms_[lane]) {
+                lane_sustain_until_ms_[lane] = 0;
+            } else if (!lane_pressed_[lane]) {
+                // Released early! Cancel sustain
+                lane_sustain_until_ms_[lane] = 0;
+            } else {
+                scoring_.sustain_tick(1);
+            }
         }
     }
 
+    // Star power timer decay (roughly 16ms per frame at 60fps)
+    scoring_.update_star_power(16);
+
     if (player_.finished() && song_time_ms_ > chart_.duration_ms()) {
         if (!scores_path_.empty() && scoring_.score() > scoring_.best_score()) {
-            // best_score is private; use the public accessor path below.
+            scoring_.save_best(scores_path_, chart_.title);
         }
         screen_ = Screen::Results;
     }
@@ -204,7 +214,7 @@ bool Game::try_hit(int lane, int64_t song_ms) {
         const ChartNote& n = chart_.notes[i];
         if (n.time_ms - song_ms > config_.windows.good_ms) break;
         if (hit_flags_[i]) continue;
-        if (n.lane != lane) continue;
+        if (n.lane != lane && !n.open) continue;
         const int64_t error = song_ms - n.time_ms;
         const int64_t abs_err = error < 0 ? -error : error;
         if (abs_err > config_.windows.good_ms) continue;
@@ -221,14 +231,136 @@ bool Game::try_hit(int lane, int64_t song_ms) {
 
     hit_flags_[best_index] = true;
     const Judgement j = judge_error(static_cast<int>(best_error), config_.windows);
-    scoring_.note_hit(j);
+    scoring_.note_hit(j, n.star_power);
     last_judgement_ = j;
     last_judgement_at_ms_ = song_ms;
     if (audio_) {
         player_.trigger_sfx(j == Judgement::Miss ? SongPlayer::SfxMiss : SongPlayer::SfxHit);
     }
-    if (n.duration_ms > 0) {
+    if (n.duration_ms > 0 && lane >= 0 && lane < kMaxLanes) {
         lane_sustain_until_ms_[lane] = static_cast<int>(n.time_ms + n.duration_ms);
+    }
+    return true;
+}
+
+bool Game::try_hit_hopo(int lane, int64_t song_ms) {
+    int best_index = -1;
+    int64_t best_error = 0;
+    int64_t best_abs = 1 << 30;
+    for (size_t i = note_cursor_; i < chart_.notes.size(); ++i) {
+        const ChartNote& n = chart_.notes[i];
+        if (n.time_ms - song_ms > config_.windows.good_ms) break;
+        if (hit_flags_[i]) continue;
+        if (n.lane != lane) continue;
+        if (!n.hopo) continue; // Only HOPO notes can be tapped without strumming
+        const int64_t error = song_ms - n.time_ms;
+        const int64_t abs_err = error < 0 ? -error : error;
+        if (abs_err > config_.windows.good_ms) continue;
+        if (abs_err < best_abs) {
+            best_abs = abs_err;
+            best_index = static_cast<int>(i);
+            best_error = error;
+        }
+    }
+    if (best_index < 0) return false;
+
+    const ChartNote& n = chart_.notes[best_index];
+    hit_flags_[best_index] = true;
+    const Judgement j = judge_error(static_cast<int>(best_error), config_.windows);
+    scoring_.note_hit(j, n.star_power);
+    last_judgement_ = j;
+    last_judgement_at_ms_ = song_ms;
+    if (audio_) {
+        player_.trigger_sfx(j == Judgement::Miss ? SongPlayer::SfxMiss : SongPlayer::SfxHit);
+    }
+    if (n.duration_ms > 0 && lane >= 0 && lane < kMaxLanes) {
+        lane_sustain_until_ms_[lane] = static_cast<int>(n.time_ms + n.duration_ms);
+    }
+    return true;
+}
+
+bool Game::try_hit_strum(int64_t song_ms) {
+    // Find unhit notes within timing window
+    int target_idx = -1;
+    int64_t best_error = 0;
+    int64_t best_abs = 1 << 30;
+
+    for (size_t i = note_cursor_; i < chart_.notes.size(); ++i) {
+        const ChartNote& n = chart_.notes[i];
+        if (n.time_ms - song_ms > config_.windows.good_ms) break;
+        if (hit_flags_[i]) continue;
+        const int64_t error = song_ms - n.time_ms;
+        const int64_t abs_err = error < 0 ? -error : error;
+        if (abs_err > config_.windows.good_ms) continue;
+        if (abs_err < best_abs) {
+            best_abs = abs_err;
+            target_idx = static_cast<int>(i);
+            best_error = error;
+        }
+    }
+    if (target_idx < 0) return false;
+
+    // Collect all notes at this target time (forms a chord or single note)
+    const int64_t chord_time = chart_.notes[target_idx].time_ms;
+    std::vector<size_t> chord_indices;
+    bool has_open = false;
+    bool req_lanes[kMaxLanes] = {false};
+    int max_req_lane = -1;
+
+    for (size_t i = note_cursor_; i < chart_.notes.size(); ++i) {
+        if (chart_.notes[i].time_ms > chord_time + 2) break;
+        if (std::abs(chart_.notes[i].time_ms - chord_time) <= 2 && !hit_flags_[i]) {
+            chord_indices.push_back(i);
+            if (chart_.notes[i].open) {
+                has_open = true;
+            } else if (chart_.notes[i].lane >= 0 && chart_.notes[i].lane < kMaxLanes) {
+                req_lanes[chart_.notes[i].lane] = true;
+                if (chart_.notes[i].lane > max_req_lane) max_req_lane = chart_.notes[i].lane;
+            }
+        }
+    }
+    if (chord_indices.empty()) return false;
+
+    // Check fret requirements
+    if (has_open) {
+        // Open note requires NO frets held
+        for (int l = 0; l < kMaxLanes; ++l) {
+            if (lane_pressed_[l]) return false;
+        }
+    } else {
+        // All required frets must be pressed
+        for (int l = 0; l < kMaxLanes; ++l) {
+            if (req_lanes[l] && !lane_pressed_[l]) return false;
+        }
+        // Fret anchoring: no frets higher than max_req_lane may be pressed
+        for (int l = max_req_lane + 1; l < kMaxLanes; ++l) {
+            if (lane_pressed_[l]) return false;
+        }
+    }
+
+    // Success! Hit all notes in the chord
+    const Judgement j = judge_error(static_cast<int>(best_error), config_.windows);
+    bool any_star_power = false;
+
+    for (size_t idx : chord_indices) {
+        hit_flags_[idx] = true;
+        const auto& n = chart_.notes[idx];
+        if (n.star_power) any_star_power = true;
+        if (n.lane >= 0 && n.lane < kMaxLanes) {
+            lane_flash_[n.lane] = 6;
+            if (n.duration_ms > 0) {
+                lane_sustain_until_ms_[n.lane] = static_cast<int>(n.time_ms + n.duration_ms);
+            }
+        } else if (n.open) {
+            for (int l = 0; l < kMaxLanes; ++l) lane_flash_[l] = 6;
+        }
+    }
+
+    scoring_.note_hit(j, any_star_power);
+    last_judgement_ = j;
+    last_judgement_at_ms_ = song_ms;
+    if (audio_) {
+        player_.trigger_sfx(j == Judgement::Miss ? SongPlayer::SfxMiss : SongPlayer::SfxHit);
     }
     return true;
 }
@@ -237,7 +369,9 @@ void Game::handle_input(const InputEvent& ev) {
     switch (screen_) {
         case Screen::Title:
             if (ev.type != InputType::Menu) break;
-            if (ev.action == MenuAction::Up) {
+            if (ev.action == MenuAction::Pause) {
+                toggle_play_mode();
+            } else if (ev.action == MenuAction::Up) {
                 title_index_ = (title_index_ + 2) % 3;
             } else if (ev.action == MenuAction::Down) {
                 title_index_ = (title_index_ + 1) % 3;
@@ -285,7 +419,9 @@ void Game::handle_input(const InputEvent& ev) {
                 break;
             }
             const int count = library_ ? static_cast<int>(library_->entries().size()) : 0;
-            if (ev.action == MenuAction::Up) {
+            if (ev.action == MenuAction::Pause || ev.action == MenuAction::FretUp || ev.action == MenuAction::FretDown) {
+                toggle_play_mode();
+            } else if (ev.action == MenuAction::Up) {
                 if (selected_song_ > 0) --selected_song_;
             } else if (ev.action == MenuAction::Down) {
                 if (count && selected_song_ + 1 < count) ++selected_song_;
@@ -391,24 +527,32 @@ void Game::handle_play_input(const InputEvent& ev) {
         if (ev.lane < 0 || ev.lane >= kMaxLanes) return;
         lane_pressed_[ev.lane] = 1;
         lane_flash_[ev.lane] = 6;
-        if (!try_hit(ev.lane, judge_ms)) {
-            // A fret press with nothing to hit is not penalised (that is what
-            // strumming is for), but it does not score either.
+
+        if (config_.play_mode == PlayMode::Classic) {
+            // Classic mode (Pixel Riffs Classic / Cardputer Keypad): Direct fret tap hits the note
+            try_hit(ev.lane, judge_ms);
+        } else {
+            // Shredder mode (Pixel Riffs Shredder / 5-Cherry Switch mod):
+            // Normal notes require strum; HOPO notes can be tapped if combo streak is active!
+            if (config_.hopo_supported && scoring_.combo() > 0) {
+                try_hit_hopo(ev.lane, judge_ms);
+            }
         }
     } else if (ev.type == InputType::Strum) {
         if (ev.value == 0) return;
         if (audio_) player_.trigger_sfx(SongPlayer::SfxStrum, 0.6f);
-        // A strum can also strike a note (used for HOPO notes and for players
-        // who hold the device like a guitar neck).
-        bool hit_any = false;
-        for (int lane = 0; lane < kMaxLanes; ++lane) {
-            if (try_hit(lane, judge_ms)) {
-                lane_pressed_[lane] = 1;
-                lane_flash_[lane] = 6;
-                hit_any = true;
+
+        if (config_.play_mode == PlayMode::Classic) {
+            // In Classic mode, strum activates Star Power if charged, or hits open notes
+            if (!scoring_.activate_star_power()) {
+                try_hit_strum(judge_ms);
+            }
+        } else {
+            // Shredder mode: Strum strikes notes and chords with matching frets
+            if (!try_hit_strum(judge_ms)) {
+                scoring_.overstrum();
             }
         }
-        if (!hit_any) scoring_.overstrum();
     }
 }
 
@@ -475,7 +619,7 @@ void Game::update_calibration(int64_t wall_ms) {
 void Game::render(uint16_t* fb) {
     switch (screen_) {
         case Screen::Title:
-            wj::ui::draw_title(fb, title_index_);
+            wj::ui::draw_title(fb, title_index_, config_.play_mode);
             break;
         case Screen::SongSelect:
             wj::ui::draw_song_select(fb, *this);

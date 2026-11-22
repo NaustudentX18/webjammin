@@ -44,14 +44,12 @@ bool GpioBackend::configure(const std::vector<GpioPin>& pins, bool active_low, i
         return false;
     }
 
-    bool all_ok = true;
     for (const auto& pin : pins_) {
         const std::string dir = std::string(kGpioRoot) + "/gpio" + std::to_string(pin.bcm);
         if (!fs::exists(dir)) {
             if (!write_sysfs(std::string(kGpioRoot) + "/export", std::to_string(pin.bcm))) {
                 error = "cannot export GPIO " + std::to_string(pin.bcm) + ": " +
                         std::strerror(errno);
-                all_ok = false;
                 continue;
             }
         }
@@ -62,13 +60,17 @@ bool GpioBackend::configure(const std::vector<GpioPin>& pins, bool active_low, i
 
         PinState st;
         st.pin = pin;
-        st.edge_fd = ::open((dir + "/edge").c_str(), O_RDWR | O_NONBLOCK);
+        st.edge_fd = -1;
         st.value_fd = ::open((dir + "/value").c_str(), O_RDONLY | O_NONBLOCK);
-        if (st.edge_fd < 0 || st.value_fd < 0) {
-            error = "cannot open GPIO " + std::to_string(pin.bcm) + " edge/value: " +
+        if (st.value_fd < 0) {
+            error = "cannot open GPIO " + std::to_string(pin.bcm) + " value: " +
                     std::strerror(errno);
-            all_ok = false;
             continue;
+        }
+        // Prime the descriptor so the first edge can be detected
+        char c = 0;
+        if (::read(st.value_fd, &c, 1) > 0) {
+            st.last_value = (c == '1');
         }
         states_.push_back(st);
     }
@@ -101,7 +103,7 @@ int GpioBackend::poll(std::vector<RawInputEvent>& out, int max) {
     pfds.reserve(states_.size());
     for (const auto& st : states_) {
         struct pollfd p {};
-        p.fd = st.edge_fd;
+        p.fd = st.value_fd;
         p.events = POLLPRI | POLLERR;
         pfds.push_back(p);
     }
@@ -110,14 +112,10 @@ int GpioBackend::poll(std::vector<RawInputEvent>& out, int max) {
     if (pr <= 0) return 0;
 
     for (size_t i = 0; i < states_.size() && count < max; ++i) {
-        if (!(pfds[i].revents & POLLPRI)) continue;
-        // Drain the edge counter.
-        char edge_buf[32];
-        const ssize_t n = ::read(states_[i].edge_fd, edge_buf, sizeof edge_buf - 1);
-        if (n <= 0) continue;
-        edge_buf[n] = '\0';
+        if (!(pfds[i].revents & (POLLPRI | POLLERR))) continue;
 
-        // Read the current level.
+        // Rewind and read the current level from value_fd
+        ::lseek(states_[i].value_fd, 0, SEEK_SET);
         char val_buf[32];
         const ssize_t vn = ::read(states_[i].value_fd, val_buf, sizeof val_buf - 1);
         if (vn <= 0) continue;
@@ -136,6 +134,8 @@ int GpioBackend::poll(std::vector<RawInputEvent>& out, int max) {
         ev.code = states_[i].pin.bcm;     // carried in `code`; axis == -1
         ev.axis = -1;
         ev.value = level ? 1 : 0;        // with active-low, level 1 = pressed
+        ev.source = InputSource::Gpio;   // MUST identify as GPIO!
+        ev.device_name = states_[i].pin.label;
         ev.time_ns = t;
         out.push_back(ev);
         ++count;

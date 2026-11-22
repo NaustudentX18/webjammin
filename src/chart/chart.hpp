@@ -22,8 +22,10 @@ struct ChartNote {
     int64_t time_ms = 0;   // when the note must be struck
     int lane = 0;          // 0..4 (fret index)
     int duration_ms = 0;   // sustain length, 0 = tap
-    bool hopo = false;     // must be struck with a hop-on (fret + strum)
+    bool hopo = false;     // can be struck with hammer-on/pull-off
     int midi = 60;         // pitch for the synthesised backing track
+    bool open = false;     // open note (purple bar across highway, strum with no frets)
+    bool star_power = false; // part of a star power phrase
 
     bool operator<(const ChartNote& o) const {
         if (time_ms != o.time_ms) return time_ms < o.time_ms;

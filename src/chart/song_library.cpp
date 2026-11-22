@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <climits>
+#include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -35,6 +36,49 @@ void collect(const std::string& dir, std::vector<std::string>& out, int depth) {
             collect(p, out, depth + 1);
         } else if (SongLibrary::is_chart_file(p)) {
             out.push_back(p);
+        }
+    }
+}
+
+void apply_song_ini_and_audio(const std::string& chart_path, Chart& chart) {
+    const std::string dir = fs::dirname(chart_path);
+    // Find audio file in directory if not set
+    if (chart.audio_file.empty()) {
+        const std::vector<const char*> cands = {
+            "song.ogg", "guitar.ogg", "song.wav", "guitar.wav", "music.ogg", "music.wav"
+        };
+        for (const char* c : cands) {
+            const std::string p = fs::join(dir, c);
+            if (fs::exists(p)) {
+                chart.audio_file = p;
+                break;
+            }
+        }
+    }
+    // Parse song.ini metadata
+    const std::string inipath = fs::join(dir, "song.ini");
+    if (fs::exists(inipath)) {
+        std::string initext;
+        if (fs::read_file(inipath, initext)) {
+            std::istringstream iss(initext);
+            std::string line;
+            while (std::getline(iss, line)) {
+                size_t eq = line.find('=');
+                if (eq == std::string::npos) continue;
+                std::string k = line.substr(0, eq);
+                std::string v = line.substr(eq + 1);
+                auto trim = [](std::string& s) {
+                    while (!s.empty() && (s.front() == ' ' || s.front() == '\t')) s.erase(s.begin());
+                    while (!s.empty() && (s.back() == ' ' || s.back() == '\t' || s.back() == '\r')) s.pop_back();
+                };
+                trim(k);
+                trim(v);
+                for (auto& ch : k) ch = std::tolower(ch);
+                if (k == "name" && !v.empty()) chart.title = v;
+                else if (k == "artist" && !v.empty()) chart.artist = v;
+                else if (k == "charter" && !v.empty()) chart.charter = v;
+                else if (k == "difficulty" && !v.empty()) chart.difficulty = v;
+            }
         }
     }
 }
@@ -143,6 +187,7 @@ void SongLibrary::scan() {
         } else {
             if (!chart.load_json_file(path, err)) continue;
         }
+        apply_song_ini_and_audio(path, chart);
         se.title = chart.title;
         se.artist = chart.artist;
         se.charter = chart.charter;
@@ -164,10 +209,16 @@ void SongLibrary::scan() {
 
 bool SongLibrary::load(const SongEntry& entry, Chart& out, std::string& error) const {
     const std::string ext = fs::extension(entry.path);
-    if (ext == "chart") return out.load_clone_chart_file(entry.path, error);
-    if (ext == "mid" || ext == "midi") return load_midi_file(entry.path, 5, out, error);
-    if (ext == "sng") return load_sng_file(entry.path, 5, out, error);
-    return out.load_json_file(entry.path, error);
+    bool ok = false;
+    if (ext == "chart") ok = out.load_clone_chart_file(entry.path, error);
+    else if (ext == "mid" || ext == "midi") ok = load_midi_file(entry.path, 5, out, error);
+    else if (ext == "sng") ok = load_sng_file(entry.path, 5, out, error);
+    else ok = out.load_json_file(entry.path, error);
+
+    if (ok) {
+        apply_song_ini_and_audio(entry.path, out);
+    }
+    return ok;
 }
 
 } // namespace wj

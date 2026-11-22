@@ -24,15 +24,21 @@ class Scoring {
 public:
     void reset(const ScoringRules& rules);
 
-    void note_hit(Judgement j);
+    void note_hit(Judgement j, bool star_power_note = false);
     void note_missed();
     void sustain_tick(int ticks);
     void overstrum();
 
+    void add_star_power(int amount);
+    bool activate_star_power();
+    void update_star_power(int delta_ms);
+    bool star_power_active() const { return star_power_active_; }
+    int star_power() const { return star_power_; }
+
     long score() const { return score_; }
     int combo() const { return combo_; }
     int max_combo() const { return max_combo_; }
-    int multiplier() const { return multiplier_; }
+    int multiplier() const { return star_power_active_ ? multiplier_ * 2 : multiplier_; }
     double accuracy() const;
     int jam() const { return jam_; }
     bool failed() const { return failed_; }
@@ -40,9 +46,9 @@ public:
     int count(Judgement j) const;
     int total_notes() const { return total_; }
 
-    // Scores are stored per song (keyed by the chart path).
-    bool load_best(const std::string& path);
-    void save_best(const std::string& path) const;
+    // Scores are stored per song (keyed by song title or file path).
+    bool load_best(const std::string& scores_file, const std::string& song_key = "");
+    void save_best(const std::string& scores_file, const std::string& song_key = "") const;
     long best_score() const { return best_score_; }
 
 private:
@@ -59,6 +65,9 @@ private:
     int great_ = 0;
     int good_ = 0;
     int miss_ = 0;
+    int star_power_ = 0;        // 0..100
+    bool star_power_active_ = false;
+    int star_power_duration_ms_ = 0;
     std::string scores_path_;
 };
 
